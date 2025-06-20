@@ -328,7 +328,7 @@
             transition: transform 0.3s ease;
             white-space: normal; /* Permite que o texto quebre linha */
             border: solid;
-            z-index: 1000;
+          
         }
 
         .player-card:hover {
@@ -1073,7 +1073,7 @@
         const db = firebase.firestore();
 
         // Initialize EmailJS (replace with your actual user ID)
-        emailjs.init("YOUR_EMAILJS_USER_ID"); // <<-- ATENÇÃO: SUBSTITUA COM SEU USER ID DO EMAILJS
+        emailjs.init("R3g1RYJL5OzVQi7vD"); // <<-- ATENÇÃO: SUBSTITUA COM SEU USER ID DO EMAILJS
 
         // Game Data
 const questions = [
@@ -3278,38 +3278,39 @@ const questions = [
                 });
         }
 
-        function registerUser(email, password, name, matricula, avatar) {
-            submitAuthBtn.disabled = true;
+function registerUser(email, password, name, matricula, avatar) {
+    submitAuthBtn.disabled = true;
+    
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            currentUser = userCredential.user;
             
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    currentUser = userCredential.user;
-                    
-                    // Save additional user data to Firestore
-                    return db.collection('users').doc(currentUser.uid).set({
-                        name: name,
-                        matricula: matricula,
-                        avatar: avatar,
-                        score: 0,
-                        chips: 3,
-                        lastChipReset: new Date(),
-                        challengesSent: 0,
-                        challengesReceived: 0,
-                        wins: 0,
-                        losses: 0
-                    });
-                })
-                .then(() => {
-                    loadUserData();
-                    hideAuthModal();
-                    showToast('Cadastro realizado com sucesso', 'success');
-                })
-                .catch((error) => {
-                    console.error('Registration error:', error);
-                    showToast('Erro ao cadastrar: ' + error.message, 'error');
-                    submitAuthBtn.disabled = false;
-                });
-        }
+            // Save additional user data to Firestore
+            return db.collection('users').doc(currentUser.uid).set({
+                name: name,
+                matricula: matricula,
+                avatar: avatar,
+                email: email, // Adiciona o email aos dados do usuário
+                score: 0,
+                chips: 3,
+                lastChipReset: new Date(),
+                challengesSent: 0,
+                challengesReceived: 0,
+                wins: 0,
+                losses: 0
+            });
+        })
+        .then(() => {
+            loadUserData();
+            hideAuthModal();
+            showToast('Cadastro realizado com sucesso', 'success');
+        })
+        .catch((error) => {
+            console.error('Registration error:', error);
+            showToast('Erro ao cadastrar: ' + error.message, 'error');
+            submitAuthBtn.disabled = false;
+        });
+}
 
         function loadUserData() {
             if (!currentUser) {
@@ -3502,7 +3503,7 @@ const questions = [
                 });
         }
 
-        async function sendChallenge() {
+async function sendChallenge() {
             if (userData.chips <= 0) {
                 showToast('Você não tem fichas suficientes para desafiar!', 'error');
                 challengeModal.style.display = 'none';
@@ -3573,20 +3574,22 @@ const questions = [
         }
 
         function sendChallengeEmail(toEmail, challengerName) {
-            const templateParams = {
-                to_email: toEmail,
-                challenger_name: challengerName,
-                app_name: "Conhecimento Arena"
-            };
-            
-            emailjs.send('default_service', 'challenge_notification', templateParams)
-                .then(() => {
-                    console.log('Email sent successfully');
-                })
-                .catch((error) => {
-                    console.error('Email send error:', error);
-                });
-        }
+    const templateParams = {
+        to_email: toEmail,
+        challenger_name: challengerName,
+        app_name: "Conhecimento Arena",
+        challenge_link: window.location.href // Adiciona o link direto para o jogo
+    };
+    
+    // Use o Service ID e Template ID que você configurou no EmailJS
+    emailjs.send('service_xh93ndo', 'template_k32s2wh', templateParams)
+        .then(() => {
+            console.log('Email de desafio enviado com sucesso');
+        })
+        .catch((error) => {
+            console.error('Falha ao enviar email:', error);
+        });
+}
 
         function listenForChallenges() {
             db.collection('challenges')
