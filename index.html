@@ -3266,6 +3266,11 @@ const questions = [
         let challengeId = null;
         let isChallenger = false;
         let challengeQuestions = []; // Armazenará as perguntas geradas para o desafio
+                // Carrega os IDs dos desafios já vistos do armazenamento local do navegador
+        const seenChallengesRaw = localStorage.getItem('seenChallenges');
+        let processedChallenges = new Set(seenChallengesRaw ? JSON.parse(seenChallengesRaw) : []);
+
+
 
         // DOM Elements
         const userInfoElement = document.getElementById('userInfo');
@@ -3425,12 +3430,14 @@ const questions = [
             authForm.reset();
             authModalTitle.textContent = 'Entrar';
             submitAuthBtn.textContent = 'Entrar';
+            submitAuthBtn.disabled = false; // <-- ADICIONE ESTA LINHA
             authToggleText.textContent = 'Não tem uma conta?';
             authToggleBtn.textContent = 'Cadastrar';
             nameGroup.style.display = 'none';
             matriculaGroup.style.display = 'none';
             avatarGroup.style.display = 'none';
         }
+
 
         function handleAuthSubmit(e) {
             e.preventDefault();
@@ -3786,6 +3793,7 @@ async function sendChallenge() {
 }
 
         function listenForChallenges() {
+            // Listener para desafios PENDENTES (para o oponente aceitar)
             db.collection('challenges')
                 .where('opponentId', '==', currentUser.uid)
                 .where('status', '==', 'pending')
@@ -3796,38 +3804,69 @@ async function sendChallenge() {
                             if (new Date() < challenge.expiresAt.toDate()) {
                                 showReceivedChallenge(challenge);
                             } else {
+                                // Se o desafio expirou, marca como rejeitado para notificar o desafiante
                                 db.collection('challenges').doc(challenge.id).update({ status: 'rejected' });
                             }
                         }
                     });
                 });
 
+            // Função interna que dispara o processo de finalização do desafio
+            const processCompletedChallenge = (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added' || change.type === 'modified') {
+                        const challenge = change.doc.data();
+                        if (challenge.status === 'completed') {
+                            // Chama a função orquestradora que lida com a exibição da UI e a atualização do DB
+                            handleChallengeCompletion(challenge);
+                        }
+                    }
+                });
+            };
+
+            // Listener para desafios COMPLETADOS onde eu sou o desafiante
             db.collection('challenges')
                 .where('challengerId', '==', currentUser.uid)
+                .where('status', '==', 'completed')
+                .onSnapshot(processCompletedChallenge);
+
+            // Listener para desafios COMPLETADOS onde eu sou o oponente
+            db.collection('challenges')
+                .where('opponentId', '==', currentUser.uid)
+                .where('status', '==', 'completed')
+                .onSnapshot(processCompletedChallenge);
+            
+            // Listener para desafios REJEITADOS (para o desafiante ser notificado e receber a ficha de volta)
+            db.collection('challenges')
+                .where('challengerId', '==', currentUser.uid)
+                .where('status', '==', 'rejected')
                 .onSnapshot((snapshot) => {
                     snapshot.docChanges().forEach(async (change) => {
-                        const challenge = change.doc.data();
-                        if (change.type === 'modified') {
-                            if (challenge.status === 'completed' && challenge.challengerId === currentUser.uid) {
-                                if (!challenge.challengerNotified) {
-                                    compareScoresAndShowResult(challenge);
-                                    await db.collection('challenges').doc(challenge.id).update({
-                                        challengerNotified: true
-                                    });
-                                }
-                            } else if (challenge.status === 'rejected' && challenge.challengerId === currentUser.uid) {
-                                if (!challenge.challengerNotified) {
-                                    showToast(`${challenge.opponentName || 'Seu oponente'} recusou o desafio. Sua ficha foi devolvida.`, 'info');
-                                    await db.collection('challenges').doc(challenge.id).update({
-                                        challengerNotified: true
-                                    });
-                                    loadUserData();
-                                }
+                        if (change.type === 'added' || change.type === 'modified') {
+                             const challenge = change.doc.data();
+                             // A verificação 'challengerNotified' evita que o toast apareça e a ficha seja devolvida múltiplas vezes
+                             if (!challenge.challengerNotified) {
+                                showToast(`${challenge.opponentName || 'Seu oponente'} recusou ou não respondeu. Sua ficha foi devolvida.`, 'info');
+                                
+                                // Devolve a ficha para o desafiante
+                                const userRef = db.collection('users').doc(challenge.challengerId);
+                                await userRef.update({
+                                    chips: firebase.firestore.FieldValue.increment(1)
+                                });
+    
+                                // Marca o desafio como notificado para não processar novamente
+                                await db.collection('challenges').doc(challenge.id).update({
+                                    challengerNotified: true
+                                });
+    
+                                // Recarrega os dados do usuário para a UI mostrar a ficha de volta
+                                loadUserData(); 
                             }
                         }
                     });
                 });
         }
+
 
         function showReceivedChallenge(challenge) {
             challengerAvatar.src = challenge.challengerAvatar || 'https://via.placeholder.com/150';
@@ -3962,26 +4001,23 @@ async function sendChallenge() {
 
             try {
                 const challengeRef = db.collection('challenges').doc(challengeId);
-                const challengeDoc = await challengeRef.get();
-                const challengeData = challengeDoc.data();
 
                 if (isChallenger) {
+                    // Apenas atualiza a pontuação do desafiante
                     await challengeRef.update({
                         challengerScore: quizScore,
                         challengerCompletedAt: new Date()
                     });
-                    showToast('Você completou o seu desafio! Aguardando o oponente.', 'success');
-                    if (challengeData.opponentScore !== -1) { 
-                         compareScoresAndShowResult({ ...challengeData, challengerScore: quizScore }); 
-                    }
+                    showToast('Você completou seu desafio! Aguardando o oponente.', 'success');
                 } else {
+                    // O oponente atualiza sua pontuação e marca o desafio como 'completed'
+                    // Isso vai disparar o 'listener' para ambos os jogadores processarem o resultado.
                     await challengeRef.update({
                         opponentScore: quizScore,
                         opponentCompletedAt: new Date(),
                         status: 'completed'
                     });
-                    showToast('Você completou o desafio! Verificando resultado...', 'success');
-                    compareScoresAndShowResult({ ...challengeData, opponentScore: quizScore, status: 'completed' });
+                    showToast('Você completou o desafio! O resultado será exibido em breve.', 'success');
                 }
             } catch (error) {
                 console.error('Error ending quiz and updating scores:', error);
@@ -3989,154 +4025,131 @@ async function sendChallenge() {
             }
         }
 
-        async function compareScoresAndShowResult(challenge) {
-            if (challenge.status !== 'completed' || 
-                (currentUser.uid === challenge.challengerId && challenge.challengerNotified) ||
-                (currentUser.uid === challenge.opponentId && challenge.opponentNotified)
-            ) {
-                return;
+
+        // NOVA FUNÇÃO AUXILIAR - Apenas para mostrar o modal de resultado
+        function showResultUI(challenge) {
+            const { challengerScore, opponentScore } = challenge;
+            let finalResultTitle = '';
+            let finalResultMessage = '';
+            let finalResultPoints = '0';
+            let finalResultIcon = 'handshake'; // Ícone de empate por padrão
+            let isCurrentWinner = false;
+
+            const opponentNameForMessage = (currentUser.uid === challenge.challengerId) 
+                ? challenge.opponentName 
+                : challenge.challengerName;
+
+            const amIChallenger = currentUser.uid === challenge.challengerId;
+            const myScore = amIChallenger ? challengerScore : opponentScore;
+            const theirScore = amIChallenger ? opponentScore : challengerScore;
+            const iWon = myScore > theirScore;
+            const iLost = theirScore > myScore;
+
+            if (iWon) {
+                finalResultTitle = 'Você Venceu!';
+                finalResultMessage = `Parabéns, você ganhou de ${opponentNameForMessage}! Placar: ${myScore} a ${theirScore}.`;
+                finalResultPoints = '+2';
+                finalResultIcon = 'emoji_events';
+                isCurrentWinner = true;
+            } else if (iLost) {
+                finalResultTitle = 'Você Perdeu';
+                finalResultMessage = `Que pena, você perdeu para ${opponentNameForMessage}. Placar: ${myScore} a ${theirScore}.`;
+                finalResultPoints = '-1';
+                finalResultIcon = 'sentiment_dissatisfied';
+                isCurrentWinner = false;
+            } else { // Empate
+                finalResultTitle = 'Empate!';
+                finalResultMessage = `O desafio contra ${opponentNameForMessage} terminou empatado! Placar: ${myScore} a ${theirScore}.`;
             }
 
-            const challengerScore = challenge.challengerScore;
-            const opponentScore = challenge.opponentScore;
+            resultIcon.innerHTML = `<span class="material-icons">${finalResultIcon}</span>`;
+            resultTitle.textContent = finalResultTitle;
+            resultMessage.textContent = finalResultMessage;
+            resultPoints.textContent = finalResultPoints;
+            resultPoints.style.color = isCurrentWinner ? 'var(--success)' : (iLost ? 'var(--error)' : 'var(--on-surface-variant)');
+            resultModal.style.display = 'flex';
+        }
 
-            let challengerWon = false;
-            let opponentWon = false;
-            let isTie = false;
-
-            if (challengerScore > opponentScore) {
-                challengerWon = true;
-            } else if (opponentScore > challengerScore) {
-                opponentWon = true;
-            } else {
-                isTie = true;
-            }
-
-            const batch = db.batch();
-
+        async function updateChallengeStatsInDB(challenge) {
             const challengerRef = db.collection('users').doc(challenge.challengerId);
-            if (challengerWon) {
-                batch.update(challengerRef, {
-                    score: firebase.firestore.FieldValue.increment(2),
-                    wins: firebase.firestore.FieldValue.increment(1),
-                    challengesSent: firebase.firestore.FieldValue.increment(1)
-                });
-            } else if (opponentWon) {
-                batch.update(challengerRef, {
-                    score: firebase.firestore.FieldValue.increment(-1),
-                    losses: firebase.firestore.FieldValue.increment(1),
-                    challengesSent: firebase.firestore.FieldValue.increment(1)
-                });
-            } else { 
-                 batch.update(challengerRef, {
-                    challengesSent: firebase.firestore.FieldValue.increment(1)
-                });
-            }
-
-            if (challenge.opponentId && challenge.opponentScore !== -1) {
-                const opponentRef = db.collection('users').doc(challenge.opponentId);
-                if (opponentWon) {
-                    batch.update(opponentRef, {
-                        score: firebase.firestore.FieldValue.increment(2),
-                        wins: firebase.firestore.FieldValue.increment(1),
-                        challengesReceived: firebase.firestore.FieldValue.increment(1)
-                    });
-                } else if (challengerWon) {
-                    batch.update(opponentRef, {
-                        score: firebase.firestore.FieldValue.increment(-1),
-                        losses: firebase.firestore.FieldValue.increment(1),
-                        challengesReceived: firebase.firestore.FieldValue.increment(1)
-                    });
-                } else {
-                    batch.update(opponentRef, {
-                        challengesReceived: firebase.firestore.FieldValue.increment(1)
-                    });
-                }
-            }
-
-            const challengeDocRef = db.collection('challenges').doc(challenge.id);
-            if (currentUser.uid === challenge.challengerId) {
-                batch.update(challengeDocRef, { challengerNotified: true });
-            }
-            if (currentUser.uid === challenge.opponentId) {
-                batch.update(challengeDocRef, { opponentNotified: true });
-            }
+            const opponentRef = db.collection('users').doc(challenge.opponentId);
+            const challengeRef = db.collection('challenges').doc(challenge.id);
 
             try {
-                await batch.commit();
+                await db.runTransaction(async (transaction) => {
+                    const challengeDoc = await transaction.get(challengeRef);
+                    if (!challengeDoc.exists) throw "Desafio não existe.";
 
-                let finalResultTitle = '';
-                let finalResultMessage = '';
-                let finalResultPoints = '0';
-                let finalResultIcon = '';
-                let isCurrentWinner = false;
+                    const currentChallengeData = challengeDoc.data();
 
-                let opponentNameForMessage = '';
-                if (currentUser.uid === challenge.challengerId) {
-                    const opponent = players.find(p => p.id === challenge.opponentId);
-                    opponentNameForMessage = opponent ? opponent.name : 'seu oponente';
-                } else if (currentUser.uid === challenge.opponentId) {
-                    const challenger = players.find(p => p.id === challenge.challengerId);
-                    opponentNameForMessage = challenger ? challenger.name : 'o desafiante';
-                }
-
-
-                if (currentUser.uid === challenge.challengerId) {
+                    // Cláusula de segurança: Se o desafio já foi processado por qualquer
+                    // um dos jogadores, a transação é abortada.
+                    if (currentChallengeData.challengerNotified) {
+                        return; 
+                    }
+                    
+                    const { challengerScore, opponentScore } = currentChallengeData;
+                    const challengerWon = challengerScore > opponentScore;
+                    const opponentWon = opponentScore > challengerScore;
+                    
+                    const challengerUpdate = { challengesSent: firebase.firestore.FieldValue.increment(1) };
                     if (challengerWon) {
-                        finalResultTitle = 'Você Venceu!';
-                        finalResultMessage = `Parabéns, você ganhou o desafio contra ${opponentNameForMessage}! Sua pontuação: ${challengerScore} vs ${opponentScore}.`;
-                        finalResultPoints = '+2';
-                        finalResultIcon = 'emoji_events';
-                        isCurrentWinner = true;
+                        challengerUpdate.score = firebase.firestore.FieldValue.increment(2);
+                        challengerUpdate.wins = firebase.firestore.FieldValue.increment(1);
                     } else if (opponentWon) {
-                        finalResultTitle = 'Você Perdeu';
-                        finalResultMessage = `Que pena, você perdeu o desafio contra ${opponentNameForMessage}. Sua pontuação: ${challengerScore} vs ${opponentScore}.`;
-                        finalResultPoints = '-1';
-                        finalResultIcon = 'sentiment_dissatisfied';
-                        isCurrentWinner = false;
-                    } else { 
-                        finalResultTitle = 'Empate!';
-                        finalResultMessage = `O desafio contra ${opponentNameForMessage} terminou em empate. Sua pontuação: ${challengerScore} vs ${opponentScore}.`;
-                        finalResultPoints = '0';
-                        finalResultIcon = 'handshake';
-                        isCurrentWinner = false;
+                        challengerUpdate.score = firebase.firestore.FieldValue.increment(-1);
+                        challengerUpdate.losses = firebase.firestore.FieldValue.increment(1);
                     }
-                } else if (currentUser.uid === challenge.opponentId) {
+                    transaction.update(challengerRef, challengerUpdate);
+
+                    const opponentUpdate = { challengesReceived: firebase.firestore.FieldValue.increment(1) };
                     if (opponentWon) {
-                        finalResultTitle = 'Você Venceu!';
-                        finalResultMessage = `Parabéns, você ganhou o desafio contra ${opponentNameForMessage}! Sua pontuação: ${opponentScore} vs ${challengerScore}.`;
-                        finalResultPoints = '+2';
-                        finalResultIcon = 'emoji_events';
-                        isCurrentWinner = true;
+                        opponentUpdate.score = firebase.firestore.FieldValue.increment(2);
+                        opponentUpdate.wins = firebase.firestore.FieldValue.increment(1);
                     } else if (challengerWon) {
-                        finalResultTitle = 'Você Perdeu';
-                        finalResultMessage = `Que pena, você perdeu o desafio contra ${opponentNameForMessage}. Sua pontuação: ${opponentScore} vs ${challengerScore}.`;
-                        finalResultPoints = '-1';
-                        finalResultIcon = 'sentiment_dissatisfied';
-                        isCurrentWinner = false;
-                    } else { 
-                        finalResultTitle = 'Empate!';
-                        finalResultMessage = `O desafio contra ${opponentNameForMessage} terminou em empate. Sua pontuação: ${opponentScore} vs ${challengerScore}.`;
-                        finalResultPoints = '0';
-                        finalResultIcon = 'handshake';
-                        isCurrentWinner = false;
+                        opponentUpdate.score = firebase.firestore.FieldValue.increment(-1);
+                        opponentUpdate.losses = firebase.firestore.FieldValue.increment(1);
                     }
-                }
+                    transaction.update(opponentRef, opponentUpdate);
 
-                resultIcon.innerHTML = `<span class="material-icons">${finalResultIcon}</span>`;
-                resultTitle.textContent = finalResultTitle;
-                resultMessage.textContent = finalResultMessage;
-                resultPoints.textContent = finalResultPoints;
-                resultPoints.style.color = isCurrentWinner ? 'var(--primary)' : (finalResultPoints.startsWith('-') ? 'var(--error)' : 'var(--on-surface-variant)');
-                resultModal.style.display = 'flex';
-
-                loadUserData();
-
+                    // Marca o desafio como processado para evitar re-execução
+                    transaction.update(challengeRef, { 
+                        challengerNotified: true, 
+                        opponentNotified: true 
+                    });
+                });
+                console.log("Transação de estatísticas concluída com sucesso.");
             } catch (error) {
-                console.error('Error comparing scores and updating results:', error);
-                showToast('Erro ao processar o resultado do desafio', 'error');
+                console.error("Transação falhou (ou já foi executada pelo outro jogador): ", error);
             }
         }
+
+
+        /**
+         * Orquestra o fim de um desafio: mostra a UI e dispara a atualização no DB.
+         * Garante que a UI seja exibida apenas uma vez por sessão.
+         */
+        async function handleChallengeCompletion(challenge) {
+            // 1. Evita que a UI seja re-exibida para o mesmo cliente
+            if (processedChallenges.has(challenge.id)) {
+                return;
+            }
+            processedChallenges.add(challenge.id);
+
+            // 2. SALVA a lista atualizada no armazenamento local do navegador
+            localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
+
+            // 3. Mostra a tela de resultado IMEDIATAMENTE para o jogador
+            showResultUI(challenge);
+
+            // 4. Tenta atualizar as estatísticas no banco de dados
+            await updateChallengeStatsInDB(challenge);
+
+            // 5. Recarrega os dados do usuário para refletir a pontuação atualizada
+            loadUserData();
+        }
+
+
 
         function logoutUser() {
             auth.signOut()
