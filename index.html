@@ -7,780 +7,976 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        :root {
-            --primary: #0047BA;
-            --on-primary: #FFFFFF;
-            --primary-container: #EADDFF;
-            --on-primary-container: #21005D;
-            --secondary: #625B71;
-            --on-secondary: #FFFFFF;
-            --secondary-container: #E8DEF8;
-            --on-secondary-container: #1D192B;
-            --tertiary: #7D5260;
-            --on-tertiary: #FFFFFF;
-            --tertiary-container: #FFD8E4;
-            --on-tertiary-container: #31111D;
-            --error: #B3261E;
-            --on-error: #FFFFFF;
-            --error-container: #F9DEDC;
-            --on-error-container: #410E0B;
-            --background: #FFFBFE;
-            --on-background: #1C1B1F;
-            --surface: #FFFBFE;
-            --on-surface: #1C1B1F;
-            --surface-variant: #E7E0EC;
-            --on-surface-variant: #49454F;
-            --outline: #79747E;
-            --shadow: #000000;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Comic Sans MS', sans-serif;
-        }
-
-        body {
-            background-color: var(--background);
-            color: var(--on-background);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            padding-top: 80px; /* Adicionado para compensar o header fixo */
-        }
-
-        /* Header */
-        header {
-            background-color: var(--primary);
-            color: var(--on-primary);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            position: fixed; /* Header fixo */
-            width: 100%; /* Ocupa toda a largura */
-            top: 0; /* Fixa no topo */
-            left: 0; /* Alinha à esquerda */
-            z-index: 100; /* Garante que fique acima de outros elementos */
-        }
-
-        .logo {
-            font-size: 24px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .logo .material-icons {
-            font-size: 28px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--on-primary);
-        }
-
-        .user-name {
-            font-weight: 500;
-        }
-
-        /* Modals (Auth, Challenge, Received Challenge, Quiz, Result) */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.3);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            overflow-y: auto; /* Para modais que podem ser longos */
-            border: solid;
-        }
-
-        .modal-content {
-            background-color: var(--surface);
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            margin: 20px 0; /* Adicionado para espaçamento em telas menores */
-            border: solid;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 22px;
-            font-weight: 500;
-            color: var(--on-surface);
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--on-surface);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: var(--on-surface-variant);
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid var(--outline);
-            border-radius: 4px;
-            font-size: 16px;
-            background-color: var(--surface);
-            color: var(--on-surface);
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 24px;
-        }
-
-        .btn {
-            padding: 10px 24px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
-        
-        #logoutBtn {
-          color: white;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: var(--on-primary);
-        }
-
-        .btn-primary:hover {
-            background-color: #5a4490;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: var(--primary);
-            border: 1px solid var(--primary);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(103, 80, 164, 0.08);
-        }
-
-        .auth-toggle {
-            margin-top: 16px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .auth-toggle-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            cursor: pointer;
-            font-weight: 500;
-            text-decoration: underline;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 24px 0;
-        }
-
-        .section-title {
-            font-size: 22px;
-            font-weight: 500;
-            margin-bottom: 16px;
-            color: var(--on-surface);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .section-title .material-icons {
-            font-size: 24px;
-        }
-
-        /* Dashboard */
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 10px;
-            margin-bottom: 32px;
-        }
-
-        .card {
-            background-color: var(--surface);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: solid;
-        }
-
-        .card-title {
-            font-size: 16px;
-            color: var(--on-surface-variant);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card-value {
-            font-size: 32px;
-            font-weight: 500;
-            color: var(--on-surface);
-        }
-
-        .chips-container {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .chip {
-            background-color: var(--primary-container);
-            color: var(--on-primary-container);
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* Challenge Section */
-        .challenge-section {
-            margin-bottom: 32px;
-        }
-
-        /* Players Grid (Horizontal Scroll) */
-        .players-grid {
-            display: flex; /* Transforma em flexbox */
-            overflow-x: auto; /* Permite rolagem horizontal */
-            scroll-snap-type: x mandatory; /* Para rolagem com "snap" */
-            -webkit-overflow-scrolling: touch; /* Suaviza a rolagem em iOS */
-            gap: 16px; /* Espaçamento entre os cards */
-            padding-bottom: 10px; /* Para evitar corte da sombra ou barra de rolagem */
-            
-        }
-
-        .player-card {
-            flex: 0 0 200px; /* Impede que os cards diminuam e define largura fixa */
-            scroll-snap-align: start; /* Alinha o início do card ao "snap point" */
-            background-color: var(--surface);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: transform 0.3s ease;
-            white-space: normal; /* Permite que o texto quebre linha */
-            border: solid;
-          
-        }
-
-        .player-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1000;
-        }
-
-        .player-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 12px;
-            border: 3px solid var(--primary-container);
-            border: solid;
-        }
-
-        .player-name {
-            font-weight: 500;
-            margin-bottom: 4px;
-            text-align: center;
-        }
-
-        .player-matricula {
-            font-size: 14px;
-            color: var(--on-surface-variant);
-            margin-bottom: 8px;
-        }
-
-        .player-score {
-            font-weight: 500;
-            color: var(--primary);
-            margin-bottom: 12px;
-        }
-
-        .challenge-btn {
-            width: 100%;
-            padding: 8px 16px;
-            background-color: var(--primary);
-            color: var(--on-primary);
-            border: none;
-            border-radius: 20px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .challenge-btn:hover {
-            background-color: #5a4490;
-        }
-
-        .challenge-btn:disabled {
-            background-color: var(--surface-variant);
-            color: var(--on-surface-variant);
-            cursor: not-allowed;
-        }
-
-        .view-all-players-btn-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-
-        /* Ranking Section */
-        .ranking-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-            border: solid;
-        }
-
-        .ranking-table th, .ranking-table td {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid var(--surface-variant);
-            border: solid;
-        }
-
-        .ranking-table th {
-            font-weight: 500;
-            color: var(--on-surface-variant);
-            background-color: var(--surface-variant);
-        }
-
-        .ranking-table tr:hover {
-            background-color: rgba(103, 80, 164, 0.05);
-            cursor: pointer; /* Indica que a linha é clicável */
-        }
-
-        .ranking-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            vertical-align: middle;
-            margin-right: 8px;
-            border: solid;
-        }
-
-        .ranking-position {
-            font-weight: 500;
-            color: var(--primary);
-        }
-
-        /* Challenge Modal */
-        .challenge-modal-content {
-            background-color: var(--surface);
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: solid;
-        }
-
-        .challenge-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        .challenge-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 12px;
-        }
-
-        .challenge-text {
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .challenge-text strong {
-            color: var(--primary);
-        }
-
-        .challenge-actions {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-        }
-
-        /* Quiz Modal */
-        .quiz-modal-content {
-            background-color: var(--surface);
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .quiz-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .quiz-timer {
-            font-size: 24px;
-            font-weight: 500;
-            color: var(--primary);
-        }
-
-        .quiz-question {
-            font-size: 18px;
-            margin-bottom: 24px;
-            line-height: 1.5;
-        }
-
-        .quiz-options {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .quiz-option {
-            padding: 12px 16px;
-            border: 1px solid var(--outline);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .quiz-option:hover {
-            background-color: var(--surface-variant);
-        }
-
-        .quiz-option.selected {
-            background-color: var(--primary-container);
-            border-color: var(--primary);
-        }
-
-        .quiz-option.correct {
-            background-color: #C8E6C9; /* Light Green */
-            border-color: #4CAF50; /* Green */
-        }
-
-        .quiz-option.incorrect {
-            background-color: #FFCDD2; /* Light Red */
-            border-color: #F44336; /* Red */
-        }
-
-        .quiz-progress {
-            margin-top: 16px;
-            font-size: 14px;
-            color: var(--on-surface-variant);
-            text-align: center;
-        }
-
-        /* Result Modal */
-        .result-modal-content {
-            background-color: var(--surface);
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            text-align: center;
-        }
-
-        .result-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            color: var(--primary);
-        }
-
-        .result-title {
-            font-size: 24px;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .result-message {
-            margin-bottom: 24px;
-            color: var(--on-surface-variant);
-        }
-
-        .result-points {
-            font-size: 32px;
-            font-weight: 500;
-            color: var(--primary);
-            margin-bottom: 24px;
-        }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--on-surface);
-            color: var(--surface);
-            padding: 12px 24px;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1100;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .toast.show {
-            opacity: 1;
-        }
-
-        /* New Modals */
-        /* Full Players List Modal */
-        #fullPlayersListModal .modal-content, #playerStatsModal .modal-content {
-            max-width: 700px; /* Maior para caber a lista ou estatísticas */
-        }
-
-        .search-bar {
-            margin-bottom: 16px;
-            padding: 10px 16px;
-            border: 1px solid var(--outline);
-            border-radius: 8px;
-            width: 100%;
-            font-size: 16px;
-        }
-
-        .players-list-full {
-            max-height: 400px; /* Altura máxima para rolagem interna */
-            overflow-y: auto; /* Rolagem vertical */
-            border: 1px solid var(--surface-variant);
-            border-radius: 8px;
-        }
-
-        .players-list-full .list-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--surface-variant);
-            gap: 12px;
-            transition: background-color 0.2s ease;
-        }
-
-        .players-list-full .list-item:last-child {
-            border-bottom: none;
-        }
-
-        .players-list-full .list-item:hover {
-            background-color: rgba(103, 80, 164, 0.05);
-        }
-
-        .players-list-full .list-item .player-info {
-            flex-grow: 1;
-        }
-
-        .players-list-full .list-item .player-info h4 {
-            margin: 0;
-            font-size: 16px;
-            color: var(--on-surface);
-        }
-
-        .players-list-full .list-item .player-info p {
-            margin: 4px 0 0;
-            font-size: 14px;
-            color: var(--on-surface-variant);
-        }
-
-        .player-list-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-container);
-        }
-
-        /* Player Stats Modal */
-        .stats-comparison {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .stats-column {
-            background-color: var(--primary-container);
-            padding: 16px;
-            border-radius: 8px;
-            color: var(--on-primary-container);
-        }
-
-        .stats-column.opponent {
-            background-color: var(--secondary-container);
-            color: var(--on-secondary-container);
-        }
-
-        .stats-column h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 18px;
-        }
-
-        .stats-column p {
-            margin: 8px 0;
-            font-size: 16px;
-            font-weight: 400;
-        }
-
-        .stats-column .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary); /* Ou outra cor de destaque */
-        }
-
-        .stats-column.opponent .stat-value {
-            color: var(--secondary);
-        }
-
-        .probability-section {
-            margin-top: 24px;
-            text-align: center;
-            border-top: 1px solid var(--surface-variant);
-            padding-top: 20px;
-        }
-
-        .probability-section h3 {
-            font-size: 20px;
-            margin-bottom: 16px;
-            color: var(--primary);
-        }
-
-        .probability-bar-container {
-            display: flex;
-            width: 100%;
-            height: 25px;
-            background-color: var(--error-container); /* Cor para derrota */
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .probability-bar-win, .probability-bar-tie {
-            height: 100%;
-            transition: width 0.5s ease-in-out;
-        }
-
-        .probability-bar-win {
-            background-color: var(--primary); /* Cor para vitória */
-        }
-
-        .probability-bar-tie {
-            background-color: var(--secondary); /* Cor para empate */
-        }
-
-        .probability-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            color: var(--on-surface-variant);
-            font-weight: 500;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .dashboard-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .players-grid {
-                grid-template-columns: 1fr 1fr; /* Pode ser ajustado para um card por linha se preferir */
-            }
-
-            .stats-comparison {
-                grid-template-columns: 1fr; /* Colunas empilhadas em telas menores */
-            }
-        }
-
-        @media (max-width: 480px) {
-            .players-grid {
-                flex-wrap: nowrap; /* Garante que continue rolando horizontalmente */
-            }
-            .player-card {
-                width: 180px; /* Reduz o tamanho do card em telas muito pequenas */
-                flex: 0 0 180px;
-            }
-            .ranking-table th, .ranking-table td {
-                padding: 8px 12px;
-            }
-        }
-        
+      /* ==========================================================================
+   1. CONFIGURAÇÃO GLOBAL E VARIÁVEIS (MATERIAL 3 - TEMA AZUL/BRANCO)
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Teko:wght@400;500;600&display=swap');
+
+:root {
+    /* Paleta de Cores Primária (Azul Corporativo) */
+    --primary: #007bff;
+    --on-primary: #ffffff;
+    --primary-container: #cfe4ff;
+    --on-primary-container: #001c3b;
+
+    /* Paleta de Cores Secundária (Cinza Neutro) */
+    --secondary: #6c757d;
+    --on-secondary: #ffffff;
+    --secondary-container: #e2e3e5;
+    --on-secondary-container: #2b2f32;
+
+    /* Paleta de Cores Terciária (Cinza Escuro para Destaques) */
+    --tertiary: #585e64;
+    --on-tertiary: #ffffff;
+    
+    /* Cores de Feedback */
+    --error: #dc3545;
+    --on-error: #ffffff;
+    --success: #198754;
+    --on-success: #ffffff;
+
+    /* Cores de Superfície (Fundo) */
+    --surface-dim: #f8f9fa; /* Fundo principal */
+    --surface: #ffffff;     /* Fundo de cards */
+    --surface-bright: #e9ecef;
+    --surface-container-lowest: #ffffff;
+    --surface-container-low: #f8f9fa;
+    --surface-container: #f1f3f5;
+    --surface-container-high: #e9ecef;
+    --surface-container-highest: #dee2e6;
+    
+    /* Cores de Texto e Ícones */
+    --on-surface: #212529; /* Texto principal */
+    --on-surface-variant: #6c757d; /* Texto secundário */
+    
+    /* Outras Cores */
+    --outline: #ced4da;
+    --outline-variant: #dee2e6;
+    --scrim: rgba(0, 0, 0, 0.5);
+    --shadow-color: rgba(0, 0, 0, 0.1);
+
+    /* Tipografia */
+    --font-family-sans-serif: 'Roboto', sans-serif;
+    --font-family-display: 'Teko', sans-serif;
+
+    /* Shape & Elevation */
+    --border-radius-small: 4px;
+    --border-radius-medium: 8px;
+    --border-radius-large: 16px;
+    --border-radius-xl: 24px;
+    --border-radius-full: 999px;
+    
+    --elevation-1: 0 1px 3px 0 var(--shadow-color), 0 1px 2px 0 var(--shadow-color);
+    --elevation-2: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -1px var(--shadow-color);
+    --elevation-3: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -2px var(--shadow-color);
+    --elevation-4: 0 20px 25px -5px var(--shadow-color), 0 10px 10px -5px var(--shadow-color);
+
+    /* Animação */
+    --transition-speed: 0.3s;
+}
+
+/* ==========================================================================
+   2. ESTILOS GERAIS E RESETS
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-sans-serif);
+    background-color: var(--surface-dim);
+    color: var(--on-surface);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.material-icons {
+    vertical-align: middle;
+}
+
+/* ==========================================================================
+   3. LAYOUT PRINCIPAL E HEADER
+   ========================================================================== */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background-color: var(--primary);
+    color: var(--on-primary);
+    box-shadow: var(--elevation-2);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+header .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-family-display);
+    font-size: 28px;
+    color: var(--on-primary); /* Branco no fundo azul */
+}
+
+header .logo .material-icons {
+    font-size: 32px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-info .material-icons {
+    font-size: 36px;
+    color: var(--primary-container); /* Azul claro */
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    border: 2px solid var(--on-primary);
+    object-fit: cover;
+}
+
+.user-name {
+    font-weight: 500;
+    color: var(--on-primary);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 24px;
+}
+
+.main-content {
+    width: 100%;
+}
+
+/* ==========================================================================
+   4. COMPONENTES (BOTÕES, CARDS, MODAIS, FORMULÁRIOS)
+   ========================================================================== */
+
+/* --- Botões --- */
+.btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: var(--border-radius-full);
+    font-family: var(--font-family-sans-serif);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn:disabled {
+    background-color: var(--surface-container-high);
+    color: var(--on-surface-variant);
+    cursor: not-allowed;
+    opacity: 0.7;
+    border: 1px solid var(--outline);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--on-primary);
+    box-shadow: var(--elevation-1);
+}
+
+.btn-primary:hover:not(:disabled) {
+    box-shadow: var(--elevation-2);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+/* Botão secundário no header (Sair) */
+header .btn-secondary {
+    background-color: transparent;
+    color: var(--on-primary);
+    border: 1px solid var(--primary-container);
+}
+header .btn-secondary:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Botão secundário no corpo da página */
+.btn-secondary {
+    background-color: var(--surface);
+    color: var(--on-surface);
+    border: 1px solid var(--outline);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--surface-container);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* --- Cards --- */
+.card {
+    background-color: var(--surface);
+    border-radius: var(--border-radius-large);
+    padding: 24px;
+    box-shadow: var(--elevation-2);
+    border: 1px solid var(--outline-variant);
+    transition: all var(--transition-speed) ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--elevation-3);
+    border-color: var(--primary);
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--on-surface-variant);
+    margin-bottom: 12px;
+}
+
+.card-title .material-icons {
+    color: var(--primary);
+    font-size: 28px;
+}
+
+.card-value {
+    font-family: var(--font-family-display);
+    font-size: 48px;
+    font-weight: 600;
+    color: var(--primary);
+    text-align: center;
+}
+
+/* --- Modais --- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: var(--scrim);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn var(--transition-speed) ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--surface);
+    margin: auto;
+    padding: 24px;
+    border: 1px solid var(--outline-variant);
+    width: 90%;
+    max-width: 500px;
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--elevation-4);
+    animation: slideIn var(--transition-speed) ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-family: var(--font-family-display);
+    font-size: 28px;
+    color: var(--primary);
+}
+
+.close-btn {
+    color: var(--on-surface-variant);
+    background: none;
+    border: none;
+    font-size: 32px;
+    cursor: pointer;
+    transition: color var(--transition-speed) ease;
+}
+
+.close-btn:hover {
+    color: var(--error);
+}
+
+/* --- Formulários --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--on-surface-variant);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: var(--border-radius-medium);
+    color: var(--on-surface);
+    font-size: 16px;
+    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-container);
+}
+
+.form-input::placeholder {
+    color: var(--on-surface-variant);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.auth-toggle {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--outline-variant);
+}
+
+.auth-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* ==========================================================================
+   5. ESTILOS DE SEÇÕES ESPECÍFICAS
+   ========================================================================== */
+
+/* --- Dashboard --- */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 48px;
+}
+
+.chips-container {
+    margin-top: 12px;
+    text-align: center;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background-color: var(--surface-container-high);
+    border-radius: var(--border-radius-full);
+    font-size: 12px;
+    color: var(--on-surface-variant);
+}
+
+/* --- Seções (Desafiar, Ranking) --- */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-family-display);
+    font-size: 32px;
+    color: var(--on-surface);
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary);
+}
+.section-title .material-icons {
+    color: var(--primary);
+    font-size: 36px;
+}
+
+/* --- Grid de Jogadores --- */
+.players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.player-card {
+    background: var(--surface);
+    border: 1px solid var(--outline-variant);
+    border-radius: var(--border-radius-medium);
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: var(--elevation-1);
+    transition: all var(--transition-speed) ease;
+}
+.player-card:hover {
+    transform: scale(1.05);
+    box-shadow: var(--elevation-3);
+    border-color: var(--primary);
+}
+
+.player-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--border-radius-full);
+    border: 3px solid var(--secondary);
+    margin-bottom: 12px;
+    object-fit: cover;
+}
+
+.player-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--on-surface);
+}
+
+.player-matricula {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    margin-bottom: 8px;
+}
+.player-score {
+    font-size: 14px;
+    color: var(--tertiary);
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+.challenge-btn {
+    width: 100%;
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
+.view-all-players-btn-container {
+    text-align: center;
+    margin-top: 24px;
+}
+
+
+/* --- Tabela de Ranking --- */
+.table-responsive {
+    overflow-x: auto;
+}
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: var(--surface);
+    border-radius: var(--border-radius-medium);
+    overflow: hidden;
+}
+
+.ranking-table thead {
+    background-color: var(--surface-container-high);
+}
+
+.ranking-table th, .ranking-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--outline-variant);
+}
+
+.ranking-table th {
+    font-family: var(--font-family-display);
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: var(--on-surface);
+}
+
+.ranking-table tbody tr {
+    transition: background-color var(--transition-speed) ease;
+}
+.ranking-table tbody tr:hover {
+    background-color: var(--primary-container);
+}
+
+.ranking-position {
+    font-family: var(--font-family-display);
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--secondary);
+    text-align: center;
+}
+
+.ranking-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--border-radius-full);
+    margin-right: 12px;
+    vertical-align: middle;
+}
+
+
+/* --- Estado Vazio (Empty State) --- */
+#emptyState {
+    text-align: center;
+    animation: fadeIn 1s ease;
+}
+#emptyState .material-icons {
+    font-size: 80px;
+    color: var(--primary);
+    margin-bottom: 16px;
+}
+#emptyState h2 {
+    font-family: var(--font-family-display);
+    font-size: 36px;
+    color: var(--on-surface);
+    margin-bottom: 8px;
+}
+#emptyState p {
+    color: var(--on-surface-variant);
+    margin-bottom: 24px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+/* ==========================================================================
+   6. ESTILOS DE MODAIS DE JOGO (DESAFIO, QUIZ, RESULTADO)
+   ========================================================================== */
+
+/* --- Modal de Desafio --- */
+.challenge-modal-content {
+    text-align: center;
+}
+
+.challenge-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid var(--primary);
+    margin-bottom: 16px;
+}
+
+.challenge-info h2 {
+    font-family: var(--font-family-display);
+    font-size: 32px;
+    color: var(--on-surface);
+    margin-bottom: 16px;
+}
+
+.challenge-text {
+    color: var(--on-surface-variant);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+.challenge-text strong {
+    color: var(--primary);
+}
+
+.challenge-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+
+/* --- Modal de Quiz --- */
+.quiz-modal-content {
+    text-align: center;
+    max-width: 700px;
+}
+
+.quiz-timer {
+    font-family: var(--font-family-display);
+    font-size: 48px;
+    color: var(--error);
+    margin-bottom: 16px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.quiz-question {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    min-height: 60px;
+}
+
+.quiz-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.quiz-option {
+    padding: 16px;
+    background-color: var(--surface);
+    border: 2px solid var(--outline);
+    border-radius: var(--border-radius-medium);
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    font-size: 16px;
+}
+
+.quiz-option:hover {
+    background-color: var(--surface-container);
+    border-color: var(--primary);
+}
+.quiz-option.selected {
+    border-color: var(--tertiary);
+    box-shadow: 0 0 10px var(--tertiary);
+}
+.quiz-option.correct {
+    background-color: var(--success);
+    border-color: var(--success);
+    color: var(--on-success);
+    transform: scale(1.05);
+}
+.quiz-option.incorrect {
+    background-color: var(--error);
+    border-color: var(--error);
+    color: var(--on-error);
+}
+
+.quiz-progress {
+    color: var(--on-surface-variant);
+    font-style: italic;
+}
+
+
+/* --- Modal de Resultado --- */
+.result-modal-content {
+    text-align: center;
+}
+
+.result-icon .material-icons {
+    font-size: 100px;
+    color: var(--success);
+    margin-bottom: 16px;
+}
+.result-title {
+    font-family: var(--font-family-display);
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+.result-message {
+    font-size: 16px;
+    color: var(--on-surface-variant);
+    margin-bottom: 16px;
+}
+.result-points {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 24px;
+}
+
+/* --- Modal Lista Completa de Jogadores --- */
+.search-bar {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: var(--border-radius-medium);
+    color: var(--on-surface);
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+.search-bar:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.players-list-full {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+.list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--outline-variant);
+    transition: background-color var(--transition-speed);
+}
+.list-item:hover {
+    background-color: var(--surface-container);
+}
+.player-list-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius-full);
+    margin-right: 16px;
+}
+.list-item .player-info {
+    flex-grow: 1;
+}
+.list-item .player-info h4 {
+    font-size: 16px;
+    font-weight: 500;
+}
+.list-item .player-info p {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+}
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* --- Modal Estatísticas do Jogador --- */
+.stats-comparison {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.stats-column {
+    flex: 1;
+    padding: 16px;
+    background: var(--surface-container-low);
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--outline-variant);
+}
+.stats-column h3 {
+    font-family: var(--font-family-display);
+    font-size: 24px;
+    color: var(--on-surface);
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--outline);
+    padding-bottom: 8px;
+}
+.stats-column.opponent h3 {
+    color: var(--primary);
+}
+.stats-column p {
+    margin-bottom: 8px;
+    color: var(--on-surface-variant);
+}
+.stat-value {
+    font-weight: bold;
+    color: var(--on-surface);
+}
+
+.probability-section h3 {
+    font-family: var(--font-family-display);
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+.probability-bar-container {
+    display: flex;
+    width: 100%;
+    height: 20px;
+    background-color: var(--error);
+    border-radius: var(--border-radius-full);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.probability-bar-win {
+    background: var(--success);
+    transition: width var(--transition-speed) ease-in-out;
+}
+.probability-bar-tie {
+    background: #ffc107; /* Amarelo para empate */
+    transition: width var(--transition-speed) ease-in-out;
+}
+.probability-labels {
+    display: flex;
+    justify-content: space-around;
+    font-size: 12px;
+}
+.probability-labels span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.probability-labels span::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+#probWinLabel::before { background: var(--success); }
+#probTieLabel::before { background: #ffc107; }
+#probLossLabel::before { background: var(--error); }
+
+
+/* ==========================================================================
+   7. UTILITÁRIOS (TOAST) E RESPONSIVIDADE
+   ========================================================================== */
+   
+/* --- Toast --- */
+.toast {
+    position: fixed;
+    bottom: -100px; /* Começa fora da tela */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--tertiary);
+    color: var(--on-tertiary);
+    padding: 16px 24px;
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--elevation-3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 3000;
+    transition: bottom 0.5s ease-in-out;
+}
+.toast.show {
+    bottom: 30px; /* Entra na tela */
+}
+
+/* ==========================================================================
+   8. RESPONSIVIDADE
+   ========================================================================== */
+@media (max-width: 768px) {
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+    }
+    .players-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .quiz-options {
+        grid-template-columns: 1fr;
+    }
+    .stats-comparison {
+        flex-direction: column;
+    }
+}
+@media (max-width: 480px) {
+    body {
+        font-size: 14px;
+    }
+    .container {
+        padding: 0 16px;
+        margin: 16px auto;
+    }
+    header {
+        padding: 8px 16px;
+    }
+    header .user-name {
+        display: none; /* Esconde o nome em telas muito pequenas */
+    }
+    .btn {
+        padding: 8px 16px;
+        font-size: 12px;
+    }
+    .card {
+        padding: 16px;
+    }
+    .card-value {
+        font-size: 40px;
+    }
+    .section-title {
+        font-size: 28px;
+    }
+    .modal-content {
+        padding: 16px;
+        width: 95%;
+    }
+    .modal-title {
+        font-size: 24px;
+    }
+}
+/* --- Grid de Jogadores com Rolagem Horizontal --- */
+.challenge-section {
+    padding-left: 24px; /* Adiciona um espaçamento inicial */
+    margin-left: -24px;  /* Compensa o espaçamento do container pai */
+}
+
+.players-grid {
+    display: flex; /* Muda para flexbox */
+    overflow-x: auto; /* Habilita a rolagem horizontal */
+    padding-bottom: 20px; /* Espaço para a barra de rolagem não sobrepor os cards */
+    -webkit-overflow-scrolling: touch; /* Melhora a experiência em iOS */
+    scrollbar-width: thin; /* Para Firefox */
+    scrollbar-color: var(--primary) transparent; /* Cor da barra de rolagem */
+}
+
+/* Estilização da barra de rolagem para Chrome/Safari/Edge */
+.players-grid::-webkit-scrollbar {
+    height: 8px;
+}
+.players-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+.players-grid::-webkit-scrollbar-thumb {
+    background-color: var(--primary);
+    border-radius: 10px;
+    border: 2px solid transparent;
+}
+
+.player-card {
+    flex: 0 0 200px; /* Impede que os cards encolham e define uma largura fixa */
+    margin-right: 16px; /* Espaçamento entre os cards */
+    background: var(--surface);
+    border: 1px solid var(--outline-variant);
+    border-radius: var(--border-radius-medium);
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: var(--elevation-1);
+    transition: all var(--transition-speed) ease;
+}
+
+.player-card:hover {
+    transform: translateY(-5px) scale(1.03); /* Efeito de elevação mais pronunciado */
+    box-shadow: var(--elevation-3);
+    border-color: var(--primary);
+}
+
+/* Adiciona um espaçamento final depois do último card */
+.players-grid::after {
+    content: '';
+    display: block;
+    flex: 0 0 8px; /* O mesmo que o padding-left da seção - 16px */
+}
+/* --- Garante que o nome do usuário apareça no header em telas pequenas --- */
+@media (max-width: 480px) {
+    header .user-name {
+        display: inline-block; /* Ou 'block', dependendo do seu layout preferido */
+    }
+}
+
     </style>
 </head>
 <body>
