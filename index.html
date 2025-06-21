@@ -956,6 +956,19 @@ header .btn-secondary:hover:not(:disabled) {
             <section id="emptyState" style="display: flex; justify-content: center; align-items: center; height: 60vh;">
                 <div style="text-align: center;">
                     <span class="material-icons" style="font-size: 64px; color: var(--primary);">sports_esports</span>
+                      <svg id="emptyStateIllustration" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--primary-container);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:var(--primary);stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#grad1)" d="M57.8,-49.8C70.9,-33.5,74.7,-7.8,70.1,13.8C65.5,35.4,52.5,52.9,35.3,62.1C18.1,71.3,-3.3,72.2,-23.5,65.6C-43.7,59,-62.7,45,-69.8,26.5C-76.8,8,-71.9,-15,-59.5,-32.1C-47.1,-49.2,-27.2,-60.4,-4.7,-58.8C17.7,-57.2,34.7,-66.1,57.8,-49.8Z" transform="translate(100 100)" />
+                        <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Material Icons" font-size="60" fill="var(--on-primary)">sports_esports</text>
+                        <text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-family="Material Icons" font-size="20" fill="var(--on-primary)" class="breathing-icon" style="animation-delay: 0.2s;">add_circle</text>
+                        <text x="30%" y="30%" dominant-baseline="middle" text-anchor="middle" font-family="Material Icons" font-size="20" fill="var(--on-primary)" class="breathing-icon" style="animation-delay: 0.4s;">star</text>
+                        <text x="70%" y="35%" dominant-baseline="middle" text-anchor="middle" font-family="Material Icons" font-size="20" fill="var(--on-primary)" class="breathing-icon" style="animation-delay: 0.6s;">emoji_events</text>
+                    </svg>
                     <h2 style="margin: 16px 0 8px;">Bem-vindo ao Conhecimento Arena</h2>
                     <p style="color: var(--on-surface-variant); margin-bottom: 24px;">Faça login ou cadastre-se para começar a desafiar outros jogadores!</p>
                     <button id="emptyAuthBtn" class="btn btn-primary">Entrar / Cadastrar</button>
