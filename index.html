@@ -116,10 +116,12 @@ header {
 header .logo {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-family: var(--font-family-display);
     font-size: 28px;
-    color: var(--on-primary); /* Branco no fundo azul */
+    font-weight: 500;
+    color: var(--on-primary);
+    letter-spacing: 1px;
 }
 
 header .logo .material-icons {
@@ -134,7 +136,7 @@ header .logo .material-icons {
 
 .user-info .material-icons {
     font-size: 36px;
-    color: var(--primary-container); /* Azul claro */
+    color: var(--primary-container);
 }
 
 .user-avatar {
@@ -143,6 +145,7 @@ header .logo .material-icons {
     border-radius: var(--border-radius-full);
     border: 2px solid var(--on-primary);
     object-fit: cover;
+    background-color: var(--primary-container);
 }
 
 .user-name {
@@ -179,6 +182,8 @@ header .logo .material-icons {
     align-items: center;
     gap: 8px;
     justify-content: center;
+    position: relative;
+    overflow: hidden; /* Para o efeito ripple */
 }
 
 .btn:disabled {
@@ -232,6 +237,8 @@ header .btn-secondary:hover:not(:disabled) {
     box-shadow: var(--elevation-2);
     border: 1px solid var(--outline-variant);
     transition: all var(--transition-speed) ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .card:hover {
@@ -239,6 +246,23 @@ header .btn-secondary:hover:not(:disabled) {
     box-shadow: var(--elevation-3);
     border-color: var(--primary);
 }
+
+/* Efeito de brilho no hover */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: skewX(-25deg);
+    transition: left 0.8s ease-in-out;
+}
+.card:hover::before {
+    left: 150%;
+}
+
 
 .card-title {
     display: flex;
@@ -279,11 +303,6 @@ header .btn-secondary:hover:not(:disabled) {
     animation: fadeIn var(--transition-speed) ease-out;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 .modal-content {
     background-color: var(--surface);
     margin: auto;
@@ -295,12 +314,6 @@ header .btn-secondary:hover:not(:disabled) {
     box-shadow: var(--elevation-4);
     animation: slideIn var(--transition-speed) ease-out;
 }
-
-@keyframes slideIn {
-    from { transform: translateY(-30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
 
 .modal-header {
     display: flex;
@@ -321,11 +334,11 @@ header .btn-secondary:hover:not(:disabled) {
     border: none;
     font-size: 32px;
     cursor: pointer;
-    transition: color var(--transition-speed) ease;
+    transition: color var(--transition-speed) ease, transform 0.2s ease;
 }
-
 .close-btn:hover {
     color: var(--error);
+    transform: rotate(90deg);
 }
 
 /* --- Formulários --- */
@@ -429,14 +442,35 @@ header .btn-secondary:hover:not(:disabled) {
     font-size: 36px;
 }
 
-/* --- Grid de Jogadores --- */
+/* --- Grid de Jogadores com Rolagem Horizontal --- */
+.challenge-section {
+    padding-left: 24px; 
+    margin-left: -24px;
+}
 .players-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+.players-grid::-webkit-scrollbar { height: 8px; }
+.players-grid::-webkit-scrollbar-track { background: transparent; }
+.players-grid::-webkit-scrollbar-thumb {
+    background-color: var(--primary);
+    border-radius: 10px;
+    border: 2px solid transparent;
+}
+.players-grid::after {
+    content: '';
+    display: block;
+    flex: 0 0 8px;
 }
 
 .player-card {
+    flex: 0 0 200px;
+    margin-right: 16px;
     background: var(--surface);
     border: 1px solid var(--outline-variant);
     border-radius: var(--border-radius-medium);
@@ -449,11 +483,10 @@ header .btn-secondary:hover:not(:disabled) {
     transition: all var(--transition-speed) ease;
 }
 .player-card:hover {
-    transform: scale(1.05);
+    transform: translateY(-5px) scale(1.03);
     box-shadow: var(--elevation-3);
     border-color: var(--primary);
 }
-
 .player-avatar {
     width: 80px;
     height: 80px;
@@ -462,14 +495,12 @@ header .btn-secondary:hover:not(:disabled) {
     margin-bottom: 12px;
     object-fit: cover;
 }
-
 .player-name {
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 4px;
     color: var(--on-surface);
 }
-
 .player-matricula {
     font-size: 12px;
     color: var(--on-surface-variant);
@@ -486,17 +517,13 @@ header .btn-secondary:hover:not(:disabled) {
     padding: 8px 16px;
     font-size: 12px;
 }
-
 .view-all-players-btn-container {
     text-align: center;
     margin-top: 24px;
 }
 
-
 /* --- Tabela de Ranking --- */
-.table-responsive {
-    overflow-x: auto;
-}
+.table-responsive { overflow-x: auto; }
 .ranking-table {
     width: 100%;
     border-collapse: collapse;
@@ -505,31 +532,24 @@ header .btn-secondary:hover:not(:disabled) {
     border-radius: var(--border-radius-medium);
     overflow: hidden;
 }
-
-.ranking-table thead {
-    background-color: var(--surface-container-high);
-}
-
+.ranking-table thead { background-color: var(--surface-container-high); }
 .ranking-table th, .ranking-table td {
     padding: 16px;
     text-align: left;
     border-bottom: 1px solid var(--outline-variant);
 }
-
 .ranking-table th {
     font-family: var(--font-family-display);
     font-size: 20px;
     letter-spacing: 1px;
     color: var(--on-surface);
 }
-
 .ranking-table tbody tr {
     transition: background-color var(--transition-speed) ease;
 }
 .ranking-table tbody tr:hover {
     background-color: var(--primary-container);
 }
-
 .ranking-position {
     font-family: var(--font-family-display);
     font-size: 24px;
@@ -537,7 +557,6 @@ header .btn-secondary:hover:not(:disabled) {
     color: var(--secondary);
     text-align: center;
 }
-
 .ranking-avatar {
     width: 32px;
     height: 32px;
@@ -545,7 +564,6 @@ header .btn-secondary:hover:not(:disabled) {
     margin-right: 12px;
     vertical-align: middle;
 }
-
 
 /* --- Estado Vazio (Empty State) --- */
 #emptyState {
@@ -571,16 +589,12 @@ header .btn-secondary:hover:not(:disabled) {
     margin-right: auto;
 }
 
-
 /* ==========================================================================
    6. ESTILOS DE MODAIS DE JOGO (DESAFIO, QUIZ, RESULTADO)
    ========================================================================== */
 
 /* --- Modal de Desafio --- */
-.challenge-modal-content {
-    text-align: center;
-}
-
+.challenge-modal-content { text-align: center; }
 .challenge-avatar {
     width: 120px;
     height: 120px;
@@ -588,23 +602,18 @@ header .btn-secondary:hover:not(:disabled) {
     border: 4px solid var(--primary);
     margin-bottom: 16px;
 }
-
 .challenge-info h2 {
     font-family: var(--font-family-display);
     font-size: 32px;
     color: var(--on-surface);
     margin-bottom: 16px;
 }
-
 .challenge-text {
     color: var(--on-surface-variant);
     margin-bottom: 12px;
     line-height: 1.5;
 }
-.challenge-text strong {
-    color: var(--primary);
-}
-
+.challenge-text strong { color: var(--primary); }
 .challenge-actions {
     display: flex;
     justify-content: center;
@@ -612,41 +621,26 @@ header .btn-secondary:hover:not(:disabled) {
     margin-top: 24px;
 }
 
-
 /* --- Modal de Quiz --- */
-.quiz-modal-content {
-    text-align: center;
-    max-width: 700px;
-}
-
+.quiz-modal-content { text-align: center; max-width: 700px; }
 .quiz-timer {
     font-family: var(--font-family-display);
     font-size: 48px;
     color: var(--error);
     margin-bottom: 16px;
-    animation: pulse 1s infinite;
 }
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
 .quiz-question {
     font-size: 22px;
     font-weight: 500;
     margin-bottom: 24px;
     min-height: 60px;
 }
-
 .quiz-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
     margin-bottom: 24px;
 }
-
 .quiz-option {
     padding: 16px;
     background-color: var(--surface);
@@ -656,10 +650,10 @@ header .btn-secondary:hover:not(:disabled) {
     transition: all var(--transition-speed) ease;
     font-size: 16px;
 }
-
 .quiz-option:hover {
     background-color: var(--surface-container);
     border-color: var(--primary);
+    transform: translateY(-2px);
 }
 .quiz-option.selected {
     border-color: var(--tertiary);
@@ -669,25 +663,18 @@ header .btn-secondary:hover:not(:disabled) {
     background-color: var(--success);
     border-color: var(--success);
     color: var(--on-success);
-    transform: scale(1.05);
+    animation: tada 0.8s ease;
 }
 .quiz-option.incorrect {
     background-color: var(--error);
     border-color: var(--error);
     color: var(--on-error);
+    animation: shake 0.5s ease;
 }
-
-.quiz-progress {
-    color: var(--on-surface-variant);
-    font-style: italic;
-}
-
+.quiz-progress { color: var(--on-surface-variant); font-style: italic; }
 
 /* --- Modal de Resultado --- */
-.result-modal-content {
-    text-align: center;
-}
-
+.result-modal-content { text-align: center; }
 .result-icon .material-icons {
     font-size: 100px;
     color: var(--success);
@@ -720,15 +707,8 @@ header .btn-secondary:hover:not(:disabled) {
     font-size: 16px;
     margin-bottom: 16px;
 }
-.search-bar:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
-.players-list-full {
-    max-height: 60vh;
-    overflow-y: auto;
-}
+.search-bar:focus { outline: none; border-color: var(--primary); }
+.players-list-full { max-height: 60vh; overflow-y: auto; }
 .list-item {
     display: flex;
     align-items: center;
@@ -736,37 +716,20 @@ header .btn-secondary:hover:not(:disabled) {
     border-bottom: 1px solid var(--outline-variant);
     transition: background-color var(--transition-speed);
 }
-.list-item:hover {
-    background-color: var(--surface-container);
-}
+.list-item:hover { background-color: var(--surface-container); }
 .player-list-avatar {
     width: 48px;
     height: 48px;
     border-radius: var(--border-radius-full);
     margin-right: 16px;
 }
-.list-item .player-info {
-    flex-grow: 1;
-}
-.list-item .player-info h4 {
-    font-size: 16px;
-    font-weight: 500;
-}
-.list-item .player-info p {
-    font-size: 12px;
-    color: var(--on-surface-variant);
-}
-.btn-small {
-    padding: 6px 12px;
-    font-size: 12px;
-}
+.list-item .player-info { flex-grow: 1; }
+.list-item .player-info h4 { font-size: 16px; font-weight: 500; }
+.list-item .player-info p { font-size: 12px; color: var(--on-surface-variant); }
+.btn-small { padding: 6px 12px; font-size: 12px; }
 
 /* --- Modal Estatísticas do Jogador --- */
-.stats-comparison {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 30px;
-}
+.stats-comparison { display: flex; gap: 20px; margin-bottom: 30px; }
 .stats-column {
     flex: 1;
     padding: 16px;
@@ -782,18 +745,9 @@ header .btn-secondary:hover:not(:disabled) {
     border-bottom: 1px solid var(--outline);
     padding-bottom: 8px;
 }
-.stats-column.opponent h3 {
-    color: var(--primary);
-}
-.stats-column p {
-    margin-bottom: 8px;
-    color: var(--on-surface-variant);
-}
-.stat-value {
-    font-weight: bold;
-    color: var(--on-surface);
-}
-
+.stats-column.opponent h3 { color: var(--primary); }
+.stats-column p { margin-bottom: 8px; color: var(--on-surface-variant); }
+.stat-value { font-weight: bold; color: var(--on-surface); }
 .probability-section h3 {
     font-family: var(--font-family-display);
     text-align: center;
@@ -811,22 +765,14 @@ header .btn-secondary:hover:not(:disabled) {
 }
 .probability-bar-win {
     background: var(--success);
-    transition: width var(--transition-speed) ease-in-out;
+    transition: width 0.5s ease-in-out;
 }
 .probability-bar-tie {
     background: #ffc107; /* Amarelo para empate */
-    transition: width var(--transition-speed) ease-in-out;
+    transition: width 0.5s ease-in-out;
 }
-.probability-labels {
-    display: flex;
-    justify-content: space-around;
-    font-size: 12px;
-}
-.probability-labels span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
+.probability-labels { display: flex; justify-content: space-around; font-size: 12px; }
+.probability-labels span { display: flex; align-items: center; gap: 6px; }
 .probability-labels span::before {
     content: '';
     width: 12px;
@@ -837,9 +783,8 @@ header .btn-secondary:hover:not(:disabled) {
 #probTieLabel::before { background: #ffc107; }
 #probLossLabel::before { background: var(--error); }
 
-
 /* ==========================================================================
-   7. UTILITÁRIOS (TOAST) E RESPONSIVIDADE
+   7. UTILITÁRIOS (TOAST) E ANIMAÇÕES
    ========================================================================== */
    
 /* --- Toast --- */
@@ -857,126 +802,77 @@ header .btn-secondary:hover:not(:disabled) {
     align-items: center;
     gap: 12px;
     z-index: 3000;
-    transition: bottom 0.5s ease-in-out;
+    transition: all 0.5s ease-in-out;
 }
-.toast.show {
-    bottom: 30px; /* Entra na tela */
+.toast.show { bottom: 30px; transform: translateX(-50%) scale(1); }
+.toast.hide { bottom: -100px; transform: translateX(-50%) scale(0.9); }
+
+/* --- Novas Animações --- */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateY(-30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.quiz-timer.pulse-anim { animation: pulse 1s infinite; }
+
+/* Animação para os cards do dashboard entrarem em sequência */
+.dashboard-cards.animate-in .card {
+    animation: slideUpFadeIn 0.5s ease-out forwards;
+    opacity: 0;
+}
+.dashboard-cards.animate-in .card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-cards.animate-in .card:nth-child(2) { animation-delay: 0.2s; }
+.dashboard-cards.animate-in .card:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes slideUpFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animação de "shake" para respostas incorretas ou erros */
+.shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* Animação de "tada" para vitórias ou acertos */
+.tada { animation: tada 1s ease; }
+@keyframes tada {
+    from { transform: scale3d(1, 1, 1); }
+    10%, 20% { transform: scale3d(.9, .9, .9) rotate3d(0, 0, 1, -3deg); }
+    30%, 50%, 70%, 90% { transform: scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg); }
+    40%, 60%, 80% { transform: scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, -3deg); }
+    to { transform: scale3d(1, 1, 1); }
+}
+
+/* Animação de "respiração" para ícones em estado de espera */
+.breathing-icon { animation: breathing 2.5s ease-in-out infinite; }
+@keyframes breathing {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
 }
 
 /* ==========================================================================
    8. RESPONSIVIDADE
    ========================================================================== */
 @media (max-width: 768px) {
-    .dashboard-cards {
-        grid-template-columns: 1fr;
-    }
-    .players-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-    .quiz-options {
-        grid-template-columns: 1fr;
-    }
-    .stats-comparison {
-        flex-direction: column;
-    }
+    .dashboard-cards { grid-template-columns: 1fr; }
+    .quiz-options { grid-template-columns: 1fr; }
+    .stats-comparison { flex-direction: column; }
 }
 @media (max-width: 480px) {
-    body {
-        font-size: 14px;
-    }
-    .container {
-        padding: 0 16px;
-        margin: 16px auto;
-    }
-    header {
-        padding: 8px 16px;
-    }
-    header .user-name {
-        display: none; /* Esconde o nome em telas muito pequenas */
-    }
-    .btn {
-        padding: 8px 16px;
-        font-size: 12px;
-    }
-    .card {
-        padding: 16px;
-    }
-    .card-value {
-        font-size: 40px;
-    }
-    .section-title {
-        font-size: 28px;
-    }
-    .modal-content {
-        padding: 16px;
-        width: 95%;
-    }
-    .modal-title {
-        font-size: 24px;
-    }
+    body { font-size: 14px; }
+    .container { padding: 0 16px; margin: 16px auto; }
+    header { padding: 8px 16px; }
+    header .user-name { display: inline-block; }
+    .btn { padding: 8px 16px; font-size: 12px; }
+    .card { padding: 16px; }
+    .card-value { font-size: 40px; }
+    .section-title { font-size: 28px; }
+    .modal-content { padding: 16px; width: 95%; }
+    .modal-title { font-size: 24px; }
 }
-/* --- Grid de Jogadores com Rolagem Horizontal --- */
-.challenge-section {
-    padding-left: 24px; /* Adiciona um espaçamento inicial */
-    margin-left: -24px;  /* Compensa o espaçamento do container pai */
-}
-
-.players-grid {
-    display: flex; /* Muda para flexbox */
-    overflow-x: auto; /* Habilita a rolagem horizontal */
-    padding-bottom: 20px; /* Espaço para a barra de rolagem não sobrepor os cards */
-    -webkit-overflow-scrolling: touch; /* Melhora a experiência em iOS */
-    scrollbar-width: thin; /* Para Firefox */
-    scrollbar-color: var(--primary) transparent; /* Cor da barra de rolagem */
-}
-
-/* Estilização da barra de rolagem para Chrome/Safari/Edge */
-.players-grid::-webkit-scrollbar {
-    height: 8px;
-}
-.players-grid::-webkit-scrollbar-track {
-    background: transparent;
-}
-.players-grid::-webkit-scrollbar-thumb {
-    background-color: var(--primary);
-    border-radius: 10px;
-    border: 2px solid transparent;
-}
-
-.player-card {
-    flex: 0 0 200px; /* Impede que os cards encolham e define uma largura fixa */
-    margin-right: 16px; /* Espaçamento entre os cards */
-    background: var(--surface);
-    border: 1px solid var(--outline-variant);
-    border-radius: var(--border-radius-medium);
-    padding: 16px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: var(--elevation-1);
-    transition: all var(--transition-speed) ease;
-}
-
-.player-card:hover {
-    transform: translateY(-5px) scale(1.03); /* Efeito de elevação mais pronunciado */
-    box-shadow: var(--elevation-3);
-    border-color: var(--primary);
-}
-
-/* Adiciona um espaçamento final depois do último card */
-.players-grid::after {
-    content: '';
-    display: block;
-    flex: 0 0 8px; /* O mesmo que o padding-left da seção - 16px */
-}
-/* --- Garante que o nome do usuário apareça no header em telas pequenas --- */
-@media (max-width: 480px) {
-    header .user-name {
-        display: inline-block; /* Ou 'block', dependendo do seu layout preferido */
-    }
-}
-
     </style>
 </head>
 <body>
@@ -1064,6 +960,7 @@ header .btn-secondary:hover:not(:disabled) {
                     <p style="color: var(--on-surface-variant); margin-bottom: 24px;">Faça login ou cadastre-se para começar a desafiar outros jogadores!</p>
                     <button id="emptyAuthBtn" class="btn btn-primary">Entrar / Cadastrar</button>
                 </div>
+                
             </section>
         </div>
     </div>
@@ -1096,6 +993,9 @@ header .btn-secondary:hover:not(:disabled) {
                     <input type="password" class="form-input" id="password" placeholder="Sua senha">
                 </div>
                 <div class="form-actions">
+<div style="font-size: 12px; color: var(--on-surface-variant); text-align: center; margin-top: 10px;">
+                     Transforme sua foto em link: <a href="https://postimages.org/" target="_blank" style="color: var(--primary);">Postimages.org</a>
+                </div>
                     <button type="button" class="btn btn-secondary" id="cancelAuthBtn">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="submitAuthBtn">Entrar</button>
                 </div>
