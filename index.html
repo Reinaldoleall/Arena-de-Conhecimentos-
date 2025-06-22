@@ -3507,49 +3507,71 @@ function registerUser(email, password, name, matricula, avatar) {
         function checkChipReset() {
             const now = new Date();
             const lastReset = userData.lastChipReset.toDate();
-            const nextReset = new Date(lastReset);
-            nextReset.setDate(nextReset.getDate() + 1); // Resetar chips 24h depois do último reset
 
-            // Calcula o tempo até o próximo reset
-            const timeUntilReset = nextReset - now;
-            
-            if (timeUntilReset <= 0) {
-                // Reset chips
+            // Criamos duas novas datas contendo apenas o ano, mês e dia.
+            // Isso nos permite comparar se o dia mudou, independentemente do horário.
+            const startOfCurrentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startOfLastResetDay = new Date(lastReset.getFullYear(), lastReset.getMonth(), lastReset.getDate());
+
+            // Se a data de "hoje" for maior que a data do último reset, significa que a meia-noite passou.
+            if (startOfCurrentDay > startOfLastResetDay) {
+                // Atualiza as fichas para 3 no banco de dados e define a data do reset para o momento atual.
                 db.collection('users').doc(currentUser.uid).update({
                     chips: 3,
                     lastChipReset: new Date()
                 })
                 .then(() => {
+                    // Atualiza os dados locais para a interface refletir a mudança imediatamente.
                     userData.chips = 3;
                     userData.lastChipReset = new Date();
                     userChipsElement.textContent = '3/3';
-                    showToast('Suas fichas foram recarregadas!', 'success');
-                    updateResetCountdown(0); // Força a atualização imediata
+                    showToast('Suas fichas diárias foram recarregadas!', 'success');
+                    
+                    // Inicia a contagem regressiva para a próxima meia-noite.
+                    updateResetCountdown();
                 });
             } else {
-                // Update countdown
-                updateResetCountdown(timeUntilReset);
+                // Se ainda estamos no mesmo dia, apenas inicia a contagem regressiva para a próxima meia-noite.
+                updateResetCountdown();
             }
         }
 
-        function updateResetCountdown(ms) {
-            if (ms <= 0) {
+
+        function updateResetCountdown() {
+            const now = new Date();
+            
+            // Calcula a data e hora exatas da próxima meia-noite.
+            const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            
+            // Calcula o tempo restante em milissegundos.
+            const msUntilMidnight = nextMidnight - now;
+
+            // Se o tempo acabou, a recarga deve acontecer.
+            if (msUntilMidnight <= 0) {
                 nextResetElement.textContent = 'Recarrega em: Agora!';
-                checkChipReset();
+                // Chama a função de verificação novamente para garantir que as fichas sejam recarregadas.
+                checkChipReset(); 
                 return;
             }
 
-            const totalSeconds = Math.floor(ms / 1000);
+            // Converte os milissegundos para um formato legível (horas, minutos, segundos).
+            const totalSeconds = Math.floor(msUntilMidnight / 1000);
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
             
-            nextResetElement.textContent = `Recarrega em: ${hours}h ${minutes}m ${seconds}s`;
+            // Atualiza o texto na tela, formatando para sempre ter dois dígitos (ex: 08h 05m 12s).
+            nextResetElement.textContent = `Recarrega em: ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
             
-            setTimeout(() => {
-                updateResetCountdown(ms - 1000);
-            }, 1000);
+            // Para o contador anterior para evitar múltiplos contadores rodando ao mesmo tempo.
+            if (window.countdownTimeout) {
+                clearTimeout(window.countdownTimeout);
+            }
+
+            // Agenda a próxima atualização do contador para daqui a 1 segundo.
+            window.countdownTimeout = setTimeout(updateResetCountdown, 1000);
         }
+
 
         function loadPlayers() {
             db.collection('users')
