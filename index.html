@@ -3752,80 +3752,124 @@ async function sendChallenge() {
         });
 }
 
-        function listenForChallenges() {
-            // Listener para desafios PENDENTES (para o oponente aceitar)
-            db.collection('challenges')
-                .where('opponentId', '==', currentUser.uid)
-                .where('status', '==', 'pending')
-                .onSnapshot((snapshot) => {
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === 'added') {
-                            const challenge = change.doc.data();
-                            if (new Date() < challenge.expiresAt.toDate()) {
-                                showReceivedChallenge(challenge);
-                            } else {
-                                // Se o desafio expirou, marca como rejeitado para notificar o desafiante
-                                db.collection('challenges').doc(challenge.id).update({ status: 'rejected' });
+function listenForChallenges() {
+    // Listener para desafios PENDENTES (para o oponente aceitar)
+    db.collection('challenges')
+        .where('opponentId', '==', currentUser.uid)
+        .where('status', '==', 'pending')
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const challenge = change.doc.data();
+                    if (new Date() < challenge.expiresAt.toDate()) {
+                        showReceivedChallenge(challenge);
+                        
+                        // Timeout para rejeição automática
+                        const timeLeft = challenge.expiresAt.toDate() - new Date();
+                        setTimeout(async () => {
+                            const doc = await db.collection('challenges').doc(challenge.id).get();
+                            if (doc.exists && doc.data().status === 'pending') {
+                                await db.collection('challenges').doc(challenge.id).update({ 
+                                    status: 'rejected',
+                                    rejectionReason: 'timeout'
+                                });
                             }
-                        }
-                    });
-                });
-
-            // Função interna que dispara o processo de finalização do desafio
-            const processCompletedChallenge = (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added' || change.type === 'modified') {
-                        const challenge = change.doc.data();
-                        if (challenge.status === 'completed') {
-                            // Chama a função orquestradora que lida com a exibição da UI e a atualização do DB
-                            handleChallengeCompletion(challenge);
-                        }
+                        }, timeLeft);
+                    } else {
+                        db.collection('challenges').doc(challenge.id).update({ 
+                            status: 'rejected',
+                            rejectionReason: 'expired'
+                        });
                     }
-                });
-            };
+                }
+            });
+        });
 
-            // Listener para desafios COMPLETADOS onde eu sou o desafiante
-            db.collection('challenges')
-                .where('challengerId', '==', currentUser.uid)
-                .where('status', '==', 'completed')
-                .onSnapshot(processCompletedChallenge);
+    // Processamento de desafios completados
+    const processCompletedChallenge = async (change) => {
+        const challenge = change.doc.data();
+        if (!processedChallenges.has(challenge.id)) {
+            try {
+                showResultUI(challenge);
+                await updateChallengeStatsInDB(challenge);
+                processedChallenges.add(challenge.id);
+                localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
+                loadUserData();
+            } catch (error) {
+                console.error("Erro ao processar desafio completo:", error);
+            }
+        }
+    };
 
-            // Listener para desafios COMPLETADOS onde eu sou o oponente
-            db.collection('challenges')
-                .where('opponentId', '==', currentUser.uid)
-                .where('status', '==', 'completed')
-                .onSnapshot(processCompletedChallenge);
+    // Listeners para desafios completados
+    db.collection('challenges')
+        .where('challengerId', '==', currentUser.uid)
+        .where('status', '==', 'completed')
+        .onSnapshot((snapshot) => snapshot.docChanges().forEach(processCompletedChallenge));
+
+    db.collection('challenges')
+        .where('opponentId', '==', currentUser.uid)
+        .where('status', '==', 'completed')
+        .onSnapshot((snapshot) => snapshot.docChanges().forEach(processCompletedChallenge));
+    
+    // Listener para desafios REJEITADOS - SOLUÇÃO DEFINITIVA
+    db.collection('challenges')
+        .where('challengerId', '==', currentUser.uid)
+        .where('status', '==', 'rejected')
+        .onSnapshot(async (snapshot) => {
+            const batch = db.batch();
+            const userRef = db.collection('users').doc(currentUser.uid);
+            const challengesToProcess = [];
             
-            // Listener para desafios REJEITADOS (para o desafiante ser notificado e receber a ficha de volta)
-            db.collection('challenges')
-                .where('challengerId', '==', currentUser.uid)
-                .where('status', '==', 'rejected')
-                .onSnapshot((snapshot) => {
-                    snapshot.docChanges().forEach(async (change) => {
-                        if (change.type === 'added' || change.type === 'modified') {
-                             const challenge = change.doc.data();
-                             // A verificação 'challengerNotified' evita que o toast apareça e a ficha seja devolvida múltiplas vezes
-                             if (!challenge.challengerNotified) {
-                                showToast(`${challenge.opponentName || 'Seu oponente'} recusou ou não respondeu. Sua ficha foi devolvida.`, 'info');
-                                
-                                // Devolve a ficha para o desafiante
-                                const userRef = db.collection('users').doc(challenge.challengerId);
-                                await userRef.update({
-                                    chips: firebase.firestore.FieldValue.increment(1)
+            // Primeira passagem: identificar desafios a processar
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const challenge = change.doc.data();
+                    if (!challenge.challengerNotified && !processedChallenges.has(challenge.id)) {
+                        challengesToProcess.push({
+                            id: challenge.id,
+                            docRef: db.collection('challenges').doc(challenge.id)
+                        });
+                    }
+                }
+            });
+            
+            // Segunda passagem: processar em lote com transação
+            if (challengesToProcess.length > 0) {
+                try {
+                    await db.runTransaction(async (transaction) => {
+                        // Verificar cada desafio novamente dentro da transação
+                        for (const {id, docRef} of challengesToProcess) {
+                            const doc = await transaction.get(docRef);
+                            if (doc.exists && !doc.data().challengerNotified) {
+                                transaction.update(docRef, {
+                                    challengerNotified: true,
+                                    processedAt: new Date()
                                 });
-    
-                                // Marca o desafio como notificado para não processar novamente
-                                await db.collection('challenges').doc(challenge.id).update({
-                                    challengerNotified: true
-                                });
-    
-                                // Recarrega os dados do usuário para a UI mostrar a ficha de volta
-                                loadUserData(); 
+                                processedChallenges.add(id);
                             }
                         }
+                        
+                        // Atualizar fichas do usuário uma única vez
+                        transaction.update(userRef, {
+                            chips: firebase.firestore.FieldValue.increment(challengesToProcess.length)
+                        });
                     });
-                });
-        }
+                    
+                    // Atualizar localStorage e UI
+                    localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
+                    showToast(
+                        `Fichas devolvidas: ${challengesToProcess.length} desafio(s) recusado(s)`, 
+                        'success'
+                    );
+                    loadUserData();
+                    
+                } catch (error) {
+                    console.error("Erro na transação de devolução de fichas:", error);
+                }
+            }
+        });
+}
 
 
         function showReceivedChallenge(challenge) {
