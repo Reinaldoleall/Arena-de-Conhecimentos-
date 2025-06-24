@@ -3769,16 +3769,12 @@ function listenForChallenges() {
                         setTimeout(async () => {
                             const doc = await db.collection('challenges').doc(challenge.id).get();
                             if (doc.exists && doc.data().status === 'pending') {
-                                await db.collection('challenges').doc(challenge.id).update({ 
-                                    status: 'rejected',
-                                    rejectionReason: 'timeout'
-                                });
+                                await rejectChallengeById(challenge.id);
                             }
                         }, timeLeft);
                     } else {
-                        db.collection('challenges').doc(challenge.id).update({ 
-                            status: 'rejected',
-                            rejectionReason: 'expired'
+                        rejectChallengeById(challenge.id).catch(error => {
+                            console.error("Error rejecting expired challenge:", error);
                         });
                     }
                 }
@@ -3796,7 +3792,7 @@ function listenForChallenges() {
                 localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
                 loadUserData();
             } catch (error) {
-                console.error("Erro ao processar desafio completo:", error);
+                console.error("Error processing completed challenge:", error);
             }
         }
     };
@@ -3812,104 +3808,92 @@ function listenForChallenges() {
         .where('status', '==', 'completed')
         .onSnapshot((snapshot) => snapshot.docChanges().forEach(processCompletedChallenge));
     
-    // Listener para desafios REJEITADOS - VERSÃO CORRIGIDA
+    // Listener para desafios REJEITADOS (apenas para notificação)
     db.collection('challenges')
         .where('challengerId', '==', currentUser.uid)
         .where('status', '==', 'rejected')
-        .onSnapshot(async (snapshot) => {
-            const batch = db.batch();
-            const userRef = db.collection('users').doc(currentUser.uid);
-            
-            // Processar cada mudança individualmente com verificação atômica
-            for (const change of snapshot.docChanges()) {
-                if (change.type === 'added' || change.type === 'modified') {
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
                     const challenge = change.doc.data();
-                    
-                    // Verificar se já foi processado
-                    if (!challenge.challengerNotified && !processedChallenges.has(challenge.id)) {
-                        try {
-                            // Usar transação para garantir processamento único
-                            await db.runTransaction(async (transaction) => {
-                                const challengeRef = db.collection('challenges').doc(challenge.id);
-                                const challengeDoc = await transaction.get(challengeRef);
-                                
-                                // Verificação dupla dentro da transação
-                                if (challengeDoc.exists && !challengeDoc.data().challengerNotified) {
-                                    // Marcar como processado
-                                    transaction.update(challengeRef, {
-                                        challengerNotified: true,
-                                        processedAt: new Date()
-                                    });
-                                    
-                                    // Devolver APENAS UMA ficha
-                                    transaction.update(userRef, {
-                                        chips: firebase.firestore.FieldValue.increment(1)
-                                    });
-                                    
-                                    // Marcar localmente como processado
-                                    processedChallenges.add(challenge.id);
-                                    localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
-                                    
-                                    showToast(
-                                        `${challenge.opponentName || 'Seu oponente'} recusou o desafio. Sua ficha foi devolvida.`, 
-                                        'success'
-                                    );
-                                }
-                            });
-                            
-                            // Recarregar dados do usuário
-                            loadUserData();
-                            
-                        } catch (error) {
-                            console.error("Erro ao processar desafio rejeitado:", error);
-                        }
+                    if (!challenge.challengerNotified) {
+                        showToast(
+                            `${challenge.opponentName || 'Seu oponente'} recusou o desafio.`, 
+                            'info'
+                        );
                     }
                 }
-            }
+            });
         });
 }
 
-async function rejectChallenge() {
-    try {
-        // Obter o estado atual do desafio
-        const challengeDoc = await db.collection('challenges').doc(challengeId).get();
+// Função centralizada para rejeição de desafios
+async function rejectChallengeById(challengeId) {
+    const challengeRef = db.collection('challenges').doc(challengeId);
+    
+    return db.runTransaction(async (transaction) => {
+        const challengeDoc = await transaction.get(challengeRef);
         
-        if (!challengeDoc.exists) {
-            showToast('Desafio não encontrado.', 'error');
+        if (!challengeDoc.exists || challengeDoc.data().status !== 'pending') {
             return;
         }
+
+        const challengerId = challengeDoc.data().challengerId;
+        const userRef = db.collection('users').doc(challengerId);
+
+        // Atualiza o desafio e devolve a ficha em uma única transação
+        transaction.update(challengeRef, {
+            status: 'rejected',
+            challengerNotified: true,
+            processedAt: new Date(),
+            rejectionReason: 'timeout'
+        });
+
+        transaction.update(userRef, {
+            chips: firebase.firestore.FieldValue.increment(1)
+        });
+    }).then(() => {
+        loadUserData();
+    }).catch(error => {
+        console.error("Transaction failure in rejectChallengeById:", error);
+        throw error;
+    });
+}
+
+// Função de rejeição manual pelo usuário
+async function rejectChallenge() {
+    if (!challengeId) return;
+    
+    try {
+        const challengeRef = db.collection('challenges').doc(challengeId);
+        const challengeDoc = await challengeRef.get();
         
-        const challenge = challengeDoc.data();
-        
-        // Verificar se o desafio ainda está pendente
-        if (challenge.status === 'pending') {
-            // Usar transação para garantir atomicidade
-            await db.runTransaction(async (transaction) => {
-                const currentChallenge = await transaction.get(db.collection('challenges').doc(challengeId));
-                
-                // Verificação dupla dentro da transação
-                if (currentChallenge.exists && currentChallenge.data().status === 'pending') {
-                    // Marcar como rejeitado
-                    transaction.update(db.collection('challenges').doc(challengeId), {
-                        status: 'rejected',
-                        rejectionReason: 'manual',
-                        rejectedAt: new Date()
-                    });
-                    
-                    // Devolver APENAS UMA ficha ao desafiante
-                    transaction.update(db.collection('users').doc(challenge.challengerId), {
-                        chips: firebase.firestore.FieldValue.increment(1)
-                    });
-                }
-            });
-            
-            showToast('Desafio recusado com sucesso.', 'success');
-        } else {
+        if (!challengeDoc.exists || challengeDoc.data().status !== 'pending') {
             showToast('Este desafio já foi processado.', 'info');
+            receivedChallengeModal.style.display = 'none';
+            return;
         }
+
+        await db.runTransaction(async (transaction) => {
+            const currentChallenge = await transaction.get(challengeRef);
+            
+            if (currentChallenge.exists && currentChallenge.data().status === 'pending') {
+                transaction.update(challengeRef, {
+                    status: 'rejected',
+                    challengerNotified: true,
+                    processedAt: new Date(),
+                    rejectionReason: 'manual'
+                });
+                
+                transaction.update(db.collection('users').doc(currentUser.uid), {
+                    chips: firebase.firestore.FieldValue.increment(1)
+                });
+            }
+        });
         
+        showToast('Desafio recusado com sucesso.', 'success');
     } catch (error) {
-        console.error('Erro ao rejeitar desafio:', error);
+        console.error('Error rejecting challenge:', error);
         showToast('Erro ao rejeitar desafio', 'error');
     } finally {
         receivedChallengeModal.style.display = 'none';
