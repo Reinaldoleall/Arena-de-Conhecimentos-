@@ -3812,63 +3812,110 @@ function listenForChallenges() {
         .where('status', '==', 'completed')
         .onSnapshot((snapshot) => snapshot.docChanges().forEach(processCompletedChallenge));
     
-    // Listener para desafios REJEITADOS - SOLUÇÃO DEFINITIVA
+    // Listener para desafios REJEITADOS - VERSÃO CORRIGIDA
     db.collection('challenges')
         .where('challengerId', '==', currentUser.uid)
         .where('status', '==', 'rejected')
         .onSnapshot(async (snapshot) => {
             const batch = db.batch();
             const userRef = db.collection('users').doc(currentUser.uid);
-            const challengesToProcess = [];
             
-            // Primeira passagem: identificar desafios a processar
-            snapshot.docChanges().forEach((change) => {
+            // Processar cada mudança individualmente com verificação atômica
+            for (const change of snapshot.docChanges()) {
                 if (change.type === 'added' || change.type === 'modified') {
                     const challenge = change.doc.data();
+                    
+                    // Verificar se já foi processado
                     if (!challenge.challengerNotified && !processedChallenges.has(challenge.id)) {
-                        challengesToProcess.push({
-                            id: challenge.id,
-                            docRef: db.collection('challenges').doc(challenge.id)
-                        });
-                    }
-                }
-            });
-            
-            // Segunda passagem: processar em lote com transação
-            if (challengesToProcess.length > 0) {
-                try {
-                    await db.runTransaction(async (transaction) => {
-                        // Verificar cada desafio novamente dentro da transação
-                        for (const {id, docRef} of challengesToProcess) {
-                            const doc = await transaction.get(docRef);
-                            if (doc.exists && !doc.data().challengerNotified) {
-                                transaction.update(docRef, {
-                                    challengerNotified: true,
-                                    processedAt: new Date()
-                                });
-                                processedChallenges.add(id);
-                            }
+                        try {
+                            // Usar transação para garantir processamento único
+                            await db.runTransaction(async (transaction) => {
+                                const challengeRef = db.collection('challenges').doc(challenge.id);
+                                const challengeDoc = await transaction.get(challengeRef);
+                                
+                                // Verificação dupla dentro da transação
+                                if (challengeDoc.exists && !challengeDoc.data().challengerNotified) {
+                                    // Marcar como processado
+                                    transaction.update(challengeRef, {
+                                        challengerNotified: true,
+                                        processedAt: new Date()
+                                    });
+                                    
+                                    // Devolver APENAS UMA ficha
+                                    transaction.update(userRef, {
+                                        chips: firebase.firestore.FieldValue.increment(1)
+                                    });
+                                    
+                                    // Marcar localmente como processado
+                                    processedChallenges.add(challenge.id);
+                                    localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
+                                    
+                                    showToast(
+                                        `${challenge.opponentName || 'Seu oponente'} recusou o desafio. Sua ficha foi devolvida.`, 
+                                        'success'
+                                    );
+                                }
+                            });
+                            
+                            // Recarregar dados do usuário
+                            loadUserData();
+                            
+                        } catch (error) {
+                            console.error("Erro ao processar desafio rejeitado:", error);
                         }
-                        
-                        // Atualizar fichas do usuário uma única vez
-                        transaction.update(userRef, {
-                            chips: firebase.firestore.FieldValue.increment(challengesToProcess.length)
-                        });
-                    });
-                    
-                    // Atualizar localStorage e UI
-                    localStorage.setItem('seenChallenges', JSON.stringify(Array.from(processedChallenges)));
-                    showToast(
-                        `Fichas devolvidas: ${challengesToProcess.length} desafio(s) recusado(s)`, 
-                        'success'
-                    );
-                    loadUserData();
-                    
-                } catch (error) {
-                    console.error("Erro na transação de devolução de fichas:", error);
+                    }
                 }
             }
         });
+}
+
+async function rejectChallenge() {
+    try {
+        // Obter o estado atual do desafio
+        const challengeDoc = await db.collection('challenges').doc(challengeId).get();
+        
+        if (!challengeDoc.exists) {
+            showToast('Desafio não encontrado.', 'error');
+            return;
+        }
+        
+        const challenge = challengeDoc.data();
+        
+        // Verificar se o desafio ainda está pendente
+        if (challenge.status === 'pending') {
+            // Usar transação para garantir atomicidade
+            await db.runTransaction(async (transaction) => {
+                const currentChallenge = await transaction.get(db.collection('challenges').doc(challengeId));
+                
+                // Verificação dupla dentro da transação
+                if (currentChallenge.exists && currentChallenge.data().status === 'pending') {
+                    // Marcar como rejeitado
+                    transaction.update(db.collection('challenges').doc(challengeId), {
+                        status: 'rejected',
+                        rejectionReason: 'manual',
+                        rejectedAt: new Date()
+                    });
+                    
+                    // Devolver APENAS UMA ficha ao desafiante
+                    transaction.update(db.collection('users').doc(challenge.challengerId), {
+                        chips: firebase.firestore.FieldValue.increment(1)
+                    });
+                }
+            });
+            
+            showToast('Desafio recusado com sucesso.', 'success');
+        } else {
+            showToast('Este desafio já foi processado.', 'info');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao rejeitar desafio:', error);
+        showToast('Erro ao rejeitar desafio', 'error');
+    } finally {
+        receivedChallengeModal.style.display = 'none';
+        challengeId = null;
+        loadUserData();
+    }
 }
 
 
@@ -3888,25 +3935,7 @@ function listenForChallenges() {
             receivedChallengeModal.style.display = 'flex';
         }
 
-        async function rejectChallenge() {
-            const currentChallenge = await db.collection('challenges').doc(challengeId).get();
-            if (currentChallenge.exists) {
-                const challengeData = currentChallenge.data();
-                if (challengeData.status === 'pending') { 
-                    await db.collection('users').doc(challengeData.challengerId).update({
-                        chips: firebase.firestore.FieldValue.increment(1)
-                    });
-                    await db.collection('challenges').doc(challengeId).update({
-                        status: 'rejected'
-                    });
-                }
-            }
 
-            receivedChallengeModal.style.display = 'none';
-            showToast('Desafio recusado.', 'info');
-            challengeId = null;
-            loadUserData();
-        }
 
         async function acceptChallenge() {
             isChallenger = false;
