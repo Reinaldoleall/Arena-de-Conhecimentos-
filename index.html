@@ -4089,59 +4089,70 @@ async function rejectChallenge() {
             resultModal.style.display = 'flex';
         }
 
-        async function updateChallengeStatsInDB(challenge) {
-            const challengerRef = db.collection('users').doc(challenge.challengerId);
-            const opponentRef = db.collection('users').doc(challenge.opponentId);
-            const challengeRef = db.collection('challenges').doc(challenge.id);
+async function updateChallengeStatsInDB(challenge) {
+    const challengerRef = db.collection('users').doc(challenge.challengerId);
+    const opponentRef = db.collection('users').doc(challenge.opponentId);
+    const challengeRef = db.collection('challenges').doc(challenge.id);
 
-            try {
-                await db.runTransaction(async (transaction) => {
-                    const challengeDoc = await transaction.get(challengeRef);
-                    if (!challengeDoc.exists) throw "Desafio não existe.";
+    try {
+        await db.runTransaction(async (transaction) => {
+            const challengeDoc = await transaction.get(challengeRef);
+            if (!challengeDoc.exists) throw "Desafio não existe.";
 
-                    const currentChallengeData = challengeDoc.data();
+            const currentChallengeData = challengeDoc.data();
 
-                    // Cláusula de segurança: Se o desafio já foi processado por qualquer
-                    // um dos jogadores, a transação é abortada.
-                    if (currentChallengeData.challengerNotified) {
-                        return; 
-                    }
-                    
-                    const { challengerScore, opponentScore } = currentChallengeData;
-                    const challengerWon = challengerScore > opponentScore;
-                    const opponentWon = opponentScore > challengerScore;
-                    
-                    const challengerUpdate = { challengesSent: firebase.firestore.FieldValue.increment(1) };
-                    if (challengerWon) {
-                        challengerUpdate.score = firebase.firestore.FieldValue.increment(2);
-                        challengerUpdate.wins = firebase.firestore.FieldValue.increment(1);
-                    } else if (opponentWon) {
-                        challengerUpdate.score = firebase.firestore.FieldValue.increment(-1);
-                        challengerUpdate.losses = firebase.firestore.FieldValue.increment(1);
-                    }
-                    transaction.update(challengerRef, challengerUpdate);
-
-                    const opponentUpdate = { challengesReceived: firebase.firestore.FieldValue.increment(1) };
-                    if (opponentWon) {
-                        opponentUpdate.score = firebase.firestore.FieldValue.increment(2);
-                        opponentUpdate.wins = firebase.firestore.FieldValue.increment(1);
-                    } else if (challengerWon) {
-                        opponentUpdate.score = firebase.firestore.FieldValue.increment(-1);
-                        opponentUpdate.losses = firebase.firestore.FieldValue.increment(1);
-                    }
-                    transaction.update(opponentRef, opponentUpdate);
-
-                    // Marca o desafio como processado para evitar re-execução
-                    transaction.update(challengeRef, { 
-                        challengerNotified: true, 
-                        opponentNotified: true 
-                    });
-                });
-                console.log("Transação de estatísticas concluída com sucesso.");
-            } catch (error) {
-                console.error("Transação falhou (ou já foi executada pelo outro jogador): ", error);
+            // Cláusula de segurança: Se o desafio já foi processado por qualquer
+            // um dos jogadores, a transação é abortada.
+            if (currentChallengeData.challengerNotified) {
+                return; 
             }
-        }
+            
+            const { challengerScore, opponentScore } = currentChallengeData;
+            const challengerWon = challengerScore > opponentScore;
+            const opponentWon = opponentScore > challengerScore;
+            
+            // Atualizações para o desafiante
+            const challengerUpdate = { 
+                challengesSent: firebase.firestore.FieldValue.increment(1)
+            };
+            
+            // Atualizações para o oponente
+            const opponentUpdate = { 
+                challengesReceived: firebase.firestore.FieldValue.increment(1)
+            };
+            
+            if (challengerWon) {
+                // Desafiante ganha: +2 pontos
+                challengerUpdate.score = firebase.firestore.FieldValue.increment(2);
+                challengerUpdate.wins = firebase.firestore.FieldValue.increment(1);
+                // Oponente perde: -1 ponto
+                opponentUpdate.score = firebase.firestore.FieldValue.increment(-1);
+                opponentUpdate.losses = firebase.firestore.FieldValue.increment(1);
+            } else if (opponentWon) {
+                // Oponente ganha: +2 pontos
+                opponentUpdate.score = firebase.firestore.FieldValue.increment(2);
+                opponentUpdate.wins = firebase.firestore.FieldValue.increment(1);
+                // Desafiante perde: -1 ponto
+                challengerUpdate.score = firebase.firestore.FieldValue.increment(-1);
+                challengerUpdate.losses = firebase.firestore.FieldValue.increment(1);
+            }
+            // Em caso de empate, nenhum ponto é alterado
+            
+            // Aplica as atualizações
+            transaction.update(challengerRef, challengerUpdate);
+            transaction.update(opponentRef, opponentUpdate);
+
+            // Marca o desafio como processado para evitar re-execução
+            transaction.update(challengeRef, { 
+                challengerNotified: true, 
+                opponentNotified: true 
+            });
+        });
+        console.log("Transação de estatísticas concluída com sucesso.");
+    } catch (error) {
+        console.error("Transação falhou (ou já foi executada pelo outro jogador): ", error);
+    }
+}
 
 
         /**
