@@ -3838,10 +3838,11 @@ async function rejectChallengeById(challengeId) {
             return;
         }
 
+        // Obtém o ID do desafiante (quem enviou o desafio)
         const challengerId = challengeDoc.data().challengerId;
-        const userRef = db.collection('users').doc(challengerId);
+        const challengerRef = db.collection('users').doc(challengerId);
 
-        // Atualiza o desafio e devolve a ficha em uma única transação
+        // Atualiza o desafio e devolve a ficha para o DESAFIANTE em uma única transação
         transaction.update(challengeRef, {
             status: 'rejected',
             challengerNotified: true,
@@ -3849,7 +3850,7 @@ async function rejectChallengeById(challengeId) {
             rejectionReason: 'timeout'
         });
 
-        transaction.update(userRef, {
+        transaction.update(challengerRef, {  // Alterado para challengerRef
             chips: firebase.firestore.FieldValue.increment(1)
         });
     }).then(() => {
@@ -3885,7 +3886,8 @@ async function rejectChallenge() {
                     rejectionReason: 'manual'
                 });
                 
-                transaction.update(db.collection('users').doc(currentUser.uid), {
+                // Devolve a ficha para o DESAFIANTE (não para o currentUser)
+                transaction.update(db.collection('users').doc(currentChallenge.data().challengerId), {
                     chips: firebase.firestore.FieldValue.increment(1)
                 });
             }
